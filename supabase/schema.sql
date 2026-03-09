@@ -715,16 +715,18 @@ ALTER FUNCTION "public"."check_and_expire_roles"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."check_role_and_update_access_settings"() RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
-    AS $$
-DECLARE
+    AS $$DECLARE
     v_schedule RECORD;
     v_user_resolution TEXT;
     v_paused_count INT := 0;
     v_resolution_allowed BOOLEAN;
     v_schedule_resolution TEXT;
     v_near_limit_access BOOLEAN;
-    v_auto_disabled_count INT := 0;
-    v_user_with_auto RECORD;
+    v_auto_trading_access BOOLEAN;
+    v_near_limit_disabled_count INT := 0;
+    v_auto_execute_disabled_count INT := 0;
+    v_user_with_auto_near_limit RECORD;
+    v_user_with_auto_execute RECORD;
 BEGIN
     -- Loop through all enabled schedules
     FOR v_schedule IN
@@ -739,9 +741,10 @@ BEGIN
     LOOP
         -- Get role-based schedule resolution and near limit access for this user
         v_near_limit_access := false;
+        v_auto_trading_access := false;
 
-        SELECT schedule_resolution, near_limit_analysis_access
-        INTO v_user_resolution, v_near_limit_access
+        SELECT schedule_resolution, near_limit_analysis_access, enable_auto_trading
+        INTO v_user_resolution, v_near_limit_access, v_auto_trading_access
         FROM public.role_limits rl
         JOIN public.user_roles ur ON rl.role_id = ur.role_id
         JOIN public.roles r ON ur.role_id = r.id
@@ -757,6 +760,10 @@ BEGIN
 
         IF v_near_limit_access IS NULL THEN
             v_near_limit_access := false;
+        END IF;
+
+        IF v_auto_trading_access IS NULL THEN
+            v_auto_trading_access := false;
         END IF;
 
         -- Map interval unit to schedule resolution bucket
@@ -797,8 +804,23 @@ BEGIN
               AND auto_near_limit_analysis = true;
 
             IF FOUND THEN
-                v_auto_disabled_count := v_auto_disabled_count + 1;
+                v_near_limit_disabled_count := v_near_limit_disabled_count + 1;
                 RAISE NOTICE 'Disabled auto_near_limit_analysis for user % due to role access restrictions (schedule loop)', v_schedule.user_id;
+            END IF;
+        END IF;
+
+        -- Enforce auto_execute_trades access on the fly
+        IF NOT v_auto_trading_access THEN
+            UPDATE public.api_settings
+            SET
+                auto_execute_trades = false,
+                updated_at = NOW()
+            WHERE user_id = v_schedule.user_id
+              AND auto_execute_trades = true;
+
+            IF FOUND THEN
+                v_auto_execute_disabled_count := v_auto_execute_disabled_count + 1;
+                RAISE NOTICE 'Disabled auto_execute_trades for user % due to role access restrictions (schedule loop)', v_schedule.user_id;
             END IF;
         END IF;
     END LOOP;
@@ -808,7 +830,7 @@ BEGIN
     END IF;
 
     -- Sweep users without active schedules who still have auto_near_limit_analysis enabled
-    FOR v_user_with_auto IN
+    FOR v_user_with_auto_near_limit IN
         SELECT aps.user_id
         FROM public.api_settings aps
         WHERE aps.auto_near_limit_analysis = true
@@ -826,7 +848,7 @@ BEGIN
         FROM public.role_limits rl
         JOIN public.user_roles ur ON rl.role_id = ur.role_id
         JOIN public.roles r ON ur.role_id = r.id
-        WHERE ur.user_id = v_user_with_auto.user_id
+        WHERE ur.user_id = v_user_with_auto_near_limit.user_id
           AND ur.is_active = true
           AND (ur.expires_at IS NULL OR ur.expires_at > NOW())
         ORDER BY r.priority DESC
@@ -841,21 +863,68 @@ BEGIN
             SET
                 auto_near_limit_analysis = false,
                 updated_at = NOW()
-            WHERE user_id = v_user_with_auto.user_id
+            WHERE user_id = v_user_with_auto_near_limit.user_id
               AND auto_near_limit_analysis = true;
 
             IF FOUND THEN
-                v_auto_disabled_count := v_auto_disabled_count + 1;
-                RAISE NOTICE 'Disabled auto_near_limit_analysis for user % due to role access restrictions (settings sweep)', v_user_with_auto.user_id;
+                v_near_limit_disabled_count := v_near_limit_disabled_count + 1;
+                RAISE NOTICE 'Disabled auto_near_limit_analysis for user % due to role access restrictions (settings sweep)', v_user_with_auto_near_limit.user_id;
             END IF;
         END IF;
     END LOOP;
 
-    IF v_auto_disabled_count > 0 THEN
-        RAISE NOTICE 'Disabled auto_near_limit_analysis for % user(s) lacking role access', v_auto_disabled_count;
+    -- Sweep users without active schedules who still have auto_execute_trades enabled
+    FOR v_user_with_auto_execute IN
+        SELECT aps.user_id
+        FROM public.api_settings aps
+        WHERE aps.auto_execute_trades = true
+          AND NOT EXISTS (
+              SELECT 1
+              FROM public.rebalance_schedules rs
+              WHERE rs.user_id = aps.user_id
+                AND rs.enabled = true
+          )
+    LOOP
+        v_auto_trading_access := false;
+
+        SELECT enable_auto_trading
+        INTO v_auto_trading_access
+        FROM public.role_limits rl
+        JOIN public.user_roles ur ON rl.role_id = ur.role_id
+        JOIN public.roles r ON ur.role_id = r.id
+        WHERE ur.user_id = v_user_with_auto_execute.user_id
+          AND ur.is_active = true
+          AND (ur.expires_at IS NULL OR ur.expires_at > NOW())
+        ORDER BY r.priority DESC
+        LIMIT 1;
+
+        IF v_auto_trading_access IS NULL THEN
+            v_auto_trading_access := false;
+        END IF;
+
+        IF NOT v_auto_trading_access THEN
+            UPDATE public.api_settings
+            SET
+                auto_execute_trades = false,
+                updated_at = NOW()
+            WHERE user_id = v_user_with_auto_execute.user_id
+              AND auto_execute_trades = true;
+
+            IF FOUND THEN
+                v_auto_execute_disabled_count := v_auto_execute_disabled_count + 1;
+                RAISE NOTICE 'Disabled auto_execute_trades for user % due to role access restrictions (settings sweep)', v_user_with_auto_execute.user_id;
+            END IF;
+        END IF;
+    END LOOP;
+
+    IF v_near_limit_disabled_count > 0 THEN
+        RAISE NOTICE 'Disabled auto_near_limit_analysis for % user(s) lacking role access', v_near_limit_disabled_count;
     END IF;
-END;
-$$;
+
+    IF v_auto_execute_disabled_count > 0 THEN
+        RAISE NOTICE 'Disabled auto_execute_trades for % user(s) lacking role access', v_auto_execute_disabled_count;
+    END IF;
+END;$$;
 
 
 ALTER FUNCTION "public"."check_role_and_update_access_settings"() OWNER TO "postgres";
@@ -4972,6 +5041,10 @@ CREATE INDEX "idx_trading_actions_analysis_created" ON "public"."trading_actions
 
 
 COMMENT ON INDEX "public"."idx_trading_actions_analysis_created" IS 'Trade orders for analysis with ordering';
+
+
+
+CREATE INDEX "idx_trading_actions_chart_lookup" ON "public"."trading_actions" USING "btree" ("user_id", "ticker", "executed_at") WHERE (("status" = 'approved'::"text") AND ("executed_at" IS NOT NULL));
 
 
 

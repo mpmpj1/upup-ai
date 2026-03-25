@@ -606,6 +606,38 @@ CREATE TABLE IF NOT EXISTS public.citations (
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS public.thesis_cards (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    research_run_id uuid REFERENCES public.research_runs(id) ON DELETE SET NULL,
+    conversation_id uuid UNIQUE REFERENCES public.conversations(id) ON DELETE SET NULL,
+    source_message_id uuid REFERENCES public.conversation_messages(id) ON DELETE SET NULL,
+    legacy_briefing_id uuid REFERENCES public.briefings(id) ON DELETE SET NULL,
+    card_kind text DEFAULT 'chat',
+    title text NOT NULL,
+    summary text,
+    query text,
+    market_scope text DEFAULT 'multi-market',
+    entity_context jsonb DEFAULT '{}'::jsonb,
+    content jsonb NOT NULL DEFAULT '{}'::jsonb,
+    stance jsonb DEFAULT '{}'::jsonb,
+    theses jsonb DEFAULT '{"bull":[],"bear":[]}'::jsonb,
+    scenarios jsonb DEFAULT '[]'::jsonb,
+    risks jsonb DEFAULT '[]'::jsonb,
+    citations jsonb DEFAULT '[]'::jsonb,
+    compliance_flags jsonb DEFAULT '[]'::jsonb,
+    provider_snapshot jsonb DEFAULT '{}'::jsonb,
+    source_summary jsonb DEFAULT '{}'::jsonb,
+    status text DEFAULT 'active',
+    pinned boolean DEFAULT false,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT thesis_cards_card_kind_check
+      CHECK (card_kind = ANY (ARRAY['chat', 'briefing', 'manual'])),
+    CONSTRAINT thesis_cards_status_check
+      CHECK (status = ANY (ARRAY['active', 'archived']))
+);
+
 CREATE INDEX IF NOT EXISTS idx_conversations_user_last_message
     ON public.conversations(user_id, last_message_at DESC);
 
@@ -621,11 +653,18 @@ CREATE INDEX IF NOT EXISTS idx_research_runs_user_created
 CREATE INDEX IF NOT EXISTS idx_citations_research_run
     ON public.citations(research_run_id);
 
+CREATE INDEX IF NOT EXISTS idx_thesis_cards_user_updated
+    ON public.thesis_cards(user_id, updated_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_thesis_cards_research_run
+    ON public.thesis_cards(research_run_id);
+
 ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.conversation_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.briefings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.research_runs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.citations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.thesis_cards ENABLE ROW LEVEL SECURITY;
 
 DO $$
 BEGIN
@@ -687,6 +726,19 @@ BEGIN
     ) THEN
         CREATE POLICY "Users can view own citations"
             ON public.citations
+            USING (user_id = auth.uid())
+            WITH CHECK (user_id = auth.uid());
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'thesis_cards' AND policyname = 'Users can manage own thesis cards'
+    ) THEN
+        CREATE POLICY "Users can manage own thesis cards"
+            ON public.thesis_cards
             USING (user_id = auth.uid())
             WITH CHECK (user_id = auth.uid());
     END IF;
@@ -765,6 +817,20 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'thesis_cards' AND policyname = 'Service role full access to thesis cards'
+    ) THEN
+        CREATE POLICY "Service role full access to thesis cards"
+            ON public.thesis_cards
+            TO service_role
+            USING (true)
+            WITH CHECK (true);
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
         SELECT 1 FROM pg_trigger WHERE tgname = 'update_conversations_updated_at'
     ) THEN
         CREATE TRIGGER update_conversations_updated_at
@@ -795,6 +861,17 @@ BEGIN
     END IF;
 END $$;
 
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'update_thesis_cards_updated_at'
+    ) THEN
+        CREATE TRIGGER update_thesis_cards_updated_at
+            BEFORE UPDATE ON public.thesis_cards
+            FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+    END IF;
+END $$;
+
 GRANT ALL ON TABLE public.conversations TO authenticated;
 GRANT ALL ON TABLE public.conversations TO service_role;
 GRANT ALL ON TABLE public.conversation_messages TO authenticated;
@@ -805,5 +882,7 @@ GRANT ALL ON TABLE public.research_runs TO authenticated;
 GRANT ALL ON TABLE public.research_runs TO service_role;
 GRANT ALL ON TABLE public.citations TO authenticated;
 GRANT ALL ON TABLE public.citations TO service_role;
+GRANT ALL ON TABLE public.thesis_cards TO authenticated;
+GRANT ALL ON TABLE public.thesis_cards TO service_role;
 
 RESET ALL;

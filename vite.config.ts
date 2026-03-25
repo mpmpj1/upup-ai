@@ -70,4 +70,14 @@ export default defineConfig(({ mode }) => ({
       }
     }
   },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.ts',
+    include: [
+      'src/components/research/__tests__/**/*.test.{ts,tsx}',
+      'src/lib/research/__tests__/**/*.test.{ts,tsx}',
+      'supabase/functions/_shared/__tests__/**/*.test.ts',
+    ],
+  },
 }));

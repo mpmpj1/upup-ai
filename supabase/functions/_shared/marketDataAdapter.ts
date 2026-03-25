@@ -1,6 +1,6 @@
-export interface MarketDataRequest {
+﻿export interface MarketDataRequest {
   marketScope?: string;
-  entities?: Array<Record<string, any> | string>;
+  entities?: Array<Record<string, unknown> | string>;
   query?: string;
   preferredLanguage?: 'zh' | 'en';
 }
@@ -207,29 +207,29 @@ const ENTITY_PRESETS: EntityPreset[] = [
   {
     symbol: '001696.SZ',
     market: 'CN',
-    displayName: 'Chongqing Zongshen Power Machinery Co.,Ltd',
+    displayName: 'Chongqing Zongshen Power Machinery Co., Ltd',
     aliases: ['宗申动力', 'zongshen power', '001696.sz', '001696'],
     searchTerms: ['Zongshen Power', '001696.SZ'],
   },
   {
     symbol: '600519.SS',
     market: 'CN',
-    displayName: 'Kweichow Moutai Co.,Ltd.',
-    aliases: ['贵州茅台', 'moutai', '600519.ss', '600519'],
+    displayName: 'Kweichow Moutai Co., Ltd.',
+    aliases: ['贵州茅台', 'moutai', '600519.ss', '600519', '茅台'],
     searchTerms: ['Kweichow Moutai', '600519.SS'],
   },
   {
     symbol: '601318.SS',
     market: 'CN',
     displayName: 'Ping An Insurance (Group) Company of China, Ltd.',
-    aliases: ['中国平安', 'ping an', '601318.ss', '601318'],
+    aliases: ['中国平安', 'ping an', '601318.ss', '601318', '平安'],
     searchTerms: ['Ping An', '601318.SS'],
   },
   {
     symbol: '002594.SZ',
     market: 'CN',
     displayName: 'BYD Company Limited',
-    aliases: ['比亚迪a', '比亚迪股份', '002594.sz', '002594'],
+    aliases: ['比亚迪', '002594.sz', '002594', 'byd'],
     searchTerms: ['BYD', '002594.SZ'],
   },
   {
@@ -261,12 +261,22 @@ const ENTITY_PRESETS: EntityPreset[] = [
     searchTerms: ['SSE Composite Index', '000001.SS'],
   },
 ];
-
 const SYMBOL_PATTERN =
-  /^(?:\^[A-Z0-9.\-]{1,12}|[A-Z]{1,6}(?:\.[A-Z]{1,4})?|\d{4,6}\.(?:HK|SZ|SS)|\d{4,6})$/i;
+  /^(?:\^[A-Z0-9.-]{1,12}|[A-Z]{1,6}(?:\.[A-Z]{1,4})?|\d{4,6}\.(?:HK|SZ|SS)|\d{4,6})$/i;
 
 function normalizeText(value: string) {
-  return value.trim().toLowerCase();
+  return String(value || '').trim().toLowerCase();
+}
+
+function coerceNumber(value: unknown) {
+  const numericValue =
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string' && value.trim()
+        ? Number(value)
+        : Number.NaN;
+
+  return Number.isFinite(numericValue) ? numericValue : null;
 }
 
 function containsChinese(text: string) {
@@ -289,7 +299,7 @@ function stripHtml(value: string) {
   return decodeXmlEntities(value).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-function flattenEntityHints(entities: Array<Record<string, any> | string> = []) {
+function flattenEntityHints(entities: Array<Record<string, unknown> | string> = []) {
   const values: string[] = [];
 
   const pushValue = (value: unknown) => {
@@ -356,7 +366,8 @@ function extractHintsFromQuery(query: string) {
     }
   }
 
-  const symbolMatches = normalized.match(/\^?[A-Z]{1,6}(?:\.[A-Z]{1,4})?|\d{4,6}(?:\.(?:HK|SZ|SS))?/g) || [];
+  const symbolMatches =
+    normalized.match(/\^?[A-Z]{1,6}(?:\.[A-Z]{1,4})?|\d{4,6}(?:\.(?:HK|SZ|SS))?/g) || [];
   for (const symbol of symbolMatches) {
     if (SYMBOL_PATTERN.test(symbol)) {
       matches.add(symbol);
@@ -409,8 +420,8 @@ function findPresetForHint(hint: string) {
   const normalized = normalizeText(hint);
   return ENTITY_PRESETS.find((preset) =>
     [preset.symbol, preset.displayName, ...preset.aliases].some(
-      (candidate) => normalizeText(candidate) === normalized
-    )
+      (candidate) => normalizeText(candidate) === normalized,
+    ),
   );
 }
 
@@ -479,7 +490,11 @@ function defaultScopeEntities(scope: string): ResolvedEntity[] {
   return [pick('^GSPC'), pick('^HSI'), pick('000001.SS')].filter(Boolean) as ResolvedEntity[];
 }
 
-async function fetchJsonWithTimeout<T>(url: string, headers: Record<string, string>, timeoutMs = 6000) {
+async function fetchJsonWithTimeout<T>(
+  url: string,
+  headers: Record<string, string>,
+  timeoutMs = 6000,
+) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -499,7 +514,11 @@ async function fetchJsonWithTimeout<T>(url: string, headers: Record<string, stri
   }
 }
 
-async function fetchTextWithTimeout(url: string, headers: Record<string, string>, timeoutMs = 6000) {
+async function fetchTextWithTimeout(
+  url: string,
+  headers: Record<string, string>,
+  timeoutMs = 6000,
+) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -524,10 +543,12 @@ async function searchYahooEntity(hint: string): Promise<ResolvedEntity | null> {
   const url = `https://query2.finance.yahoo.com/v1/finance/search?q=${encoded}&quotesCount=8&newsCount=0&lang=en-US&region=US`;
 
   try {
-    const response = await fetchJsonWithTimeout<any>(url, YAHOO_HEADERS, 6000);
-    const quotes = Array.isArray(response?.quotes) ? response.quotes : [];
-    const best = quotes.find((quote: any) =>
-      ['EQUITY', 'INDEX', 'ETF'].includes(String(quote?.quoteType || '').toUpperCase())
+    const response = await fetchJsonWithTimeout<Record<string, unknown>>(url, YAHOO_HEADERS, 6000);
+    const quotes = Array.isArray(response.quotes)
+      ? (response.quotes as Array<Record<string, unknown>>)
+      : [];
+    const best = quotes.find((quote) =>
+      ['EQUITY', 'INDEX', 'ETF'].includes(String(quote?.quoteType || '').toUpperCase()),
     );
 
     if (!best?.symbol) {
@@ -539,7 +560,11 @@ async function searchYahooEntity(hint: string): Promise<ResolvedEntity | null> {
       symbol: String(best.symbol),
       market: inferMarketFromSymbol(String(best.symbol)),
       displayName: String(best.longname || best.shortname || best.symbol),
-      searchTerms: [hint, String(best.longname || best.shortname || best.symbol), String(best.symbol)],
+      searchTerms: [
+        hint,
+        String(best.longname || best.shortname || best.symbol),
+        String(best.symbol),
+      ],
     };
   } catch {
     return null;
@@ -606,20 +631,22 @@ async function fetchChartSnapshot(entity: ResolvedEntity): Promise<MarketEntityS
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encoded}?range=5d&interval=1d&includePrePost=false&events=div%2Csplits`;
 
   try {
-    const response = await fetchJsonWithTimeout<any>(url, YAHOO_HEADERS, 6500);
-    const result = response?.chart?.result?.[0];
-    const meta = result?.meta;
+    const response = await fetchJsonWithTimeout<Record<string, unknown>>(url, YAHOO_HEADERS, 6500);
+    const chart = response.chart as Record<string, unknown> | undefined;
+    const result = Array.isArray(chart?.result)
+      ? (chart.result[0] as Record<string, unknown> | undefined)
+      : undefined;
+    const meta =
+      result?.meta && typeof result.meta === 'object'
+        ? (result.meta as Record<string, unknown>)
+        : undefined;
 
     if (!meta?.symbol) {
       return null;
     }
 
-    const previousClose =
-      Number.isFinite(meta.chartPreviousClose) ? Number(meta.chartPreviousClose) :
-      Number.isFinite(meta.previousClose) ? Number(meta.previousClose) :
-      null;
-    const regularMarketPrice =
-      Number.isFinite(meta.regularMarketPrice) ? Number(meta.regularMarketPrice) : null;
+    const previousClose = coerceNumber(meta.chartPreviousClose) ?? coerceNumber(meta.previousClose);
+    const regularMarketPrice = coerceNumber(meta.regularMarketPrice);
     const change =
       regularMarketPrice !== null && previousClose !== null
         ? Number((regularMarketPrice - previousClose).toFixed(4))
@@ -641,15 +668,15 @@ async function fetchChartSnapshot(entity: ResolvedEntity): Promise<MarketEntityS
       previousClose,
       change,
       changePercent,
-      dayHigh: Number.isFinite(meta.regularMarketDayHigh) ? Number(meta.regularMarketDayHigh) : null,
-      dayLow: Number.isFinite(meta.regularMarketDayLow) ? Number(meta.regularMarketDayLow) : null,
-      volume: Number.isFinite(meta.regularMarketVolume) ? Number(meta.regularMarketVolume) : null,
-      fiftyTwoWeekHigh: Number.isFinite(meta.fiftyTwoWeekHigh) ? Number(meta.fiftyTwoWeekHigh) : null,
-      fiftyTwoWeekLow: Number.isFinite(meta.fiftyTwoWeekLow) ? Number(meta.fiftyTwoWeekLow) : null,
+      dayHigh: coerceNumber(meta.regularMarketDayHigh),
+      dayLow: coerceNumber(meta.regularMarketDayLow),
+      volume: coerceNumber(meta.regularMarketVolume),
+      fiftyTwoWeekHigh: coerceNumber(meta.fiftyTwoWeekHigh),
+      fiftyTwoWeekLow: coerceNumber(meta.fiftyTwoWeekLow),
       marketCap: null,
       marketState: String(meta.exchangeTimezoneName || ''),
-      asOf: Number.isFinite(meta.regularMarketTime)
-        ? new Date(Number(meta.regularMarketTime) * 1000).toISOString()
+      asOf: coerceNumber(meta.regularMarketTime) !== null
+        ? new Date(Number(coerceNumber(meta.regularMarketTime)) * 1000).toISOString()
         : null,
       source: 'yahoo-finance',
     };
@@ -667,17 +694,27 @@ async function fetchMarketCap(symbol: string) {
     `?type=trailingMarketCap&period1=${period1}&period2=${now}`;
 
   try {
-    const response = await fetchJsonWithTimeout<any>(url, YAHOO_HEADERS, 6500);
-    const series = response?.timeseries?.result?.[0]?.trailingMarketCap;
+    const response = await fetchJsonWithTimeout<Record<string, unknown>>(url, YAHOO_HEADERS, 6500);
+    const timeseries = response.timeseries as Record<string, unknown> | undefined;
+    const result = Array.isArray(timeseries?.result)
+      ? (timeseries.result[0] as Record<string, unknown> | undefined)
+      : undefined;
+    const series = Array.isArray(result?.trailingMarketCap)
+      ? (result.trailingMarketCap as Array<Record<string, unknown>>)
+      : [];
     if (!Array.isArray(series) || series.length === 0) {
       return null;
     }
 
     const latest = [...series]
       .reverse()
-      .find((item) => Number.isFinite(item?.reportedValue?.raw));
+      .find((item) =>
+        coerceNumber((item.reportedValue as Record<string, unknown> | undefined)?.raw) !== null,
+      );
 
-    return latest ? Number(latest.reportedValue.raw) : null;
+    return latest
+      ? coerceNumber((latest.reportedValue as Record<string, unknown> | undefined)?.raw)
+      : null;
   } catch {
     return null;
   }
@@ -766,7 +803,7 @@ function scoreNewsItem(item: MarketNewsItem) {
 
   if (
     /财报|业绩|回购|监管|交付|需求|订单|earnings|guidance|buyback|deliveries|probe|tariff|fed|cpi|pmi|stimulus|oil/.test(
-      bodyText
+      bodyText,
     )
   ) {
     score += 1;
@@ -783,8 +820,12 @@ function parseGoogleNewsItems(xml: string, relatedSymbols: string[]) {
       const block = match[1];
       const title = decodeXmlEntities(block.match(/<title>([\s\S]*?)<\/title>/i)?.[1] || '').trim();
       const url = decodeXmlEntities(block.match(/<link>([\s\S]*?)<\/link>/i)?.[1] || '').trim();
-      const description = stripHtml(block.match(/<description>([\s\S]*?)<\/description>/i)?.[1] || '');
-      const publishedAt = decodeXmlEntities(block.match(/<pubDate>([\s\S]*?)<\/pubDate>/i)?.[1] || '').trim();
+      const description = stripHtml(
+        block.match(/<description>([\s\S]*?)<\/description>/i)?.[1] || '',
+      );
+      const publishedAt = decodeXmlEntities(
+        block.match(/<pubDate>([\s\S]*?)<\/pubDate>/i)?.[1] || '',
+      ).trim();
       const publisher =
         decodeXmlEntities(block.match(/<source[^>]*>([\s\S]*?)<\/source>/i)?.[1] || '').trim() ||
         inferPublisherFromTitle(title);
@@ -811,12 +852,13 @@ function parseGoogleNewsItems(xml: string, relatedSymbols: string[]) {
 function buildNewsRequests(
   resolvedEntities: ResolvedEntity[],
   scope: string,
-  preferredLanguage: 'zh' | 'en'
+  preferredLanguage: 'zh' | 'en',
 ) {
   if (resolvedEntities.length > 0) {
     return resolvedEntities.slice(0, 3).map((entity) => {
-      const baseTerm =
-        containsChinese(entity.requested) ? entity.requested : entity.searchTerms[0] || entity.displayName;
+      const baseTerm = containsChinese(entity.requested)
+        ? entity.requested
+        : entity.searchTerms[0] || entity.displayName;
       const query =
         preferredLanguage === 'zh' || containsChinese(baseTerm)
           ? `${baseTerm} when:7d`
@@ -898,7 +940,7 @@ function buildNewsRequests(
 async function fetchNews(
   resolvedEntities: ResolvedEntity[],
   scope: string,
-  preferredLanguage: 'zh' | 'en'
+  preferredLanguage: 'zh' | 'en',
 ) {
   const requests = buildNewsRequests(resolvedEntities, scope, preferredLanguage);
   const queries = requests.map((item) => item.query);
@@ -919,7 +961,7 @@ async function fetchNews(
       } catch {
         return [];
       }
-    })
+    }),
   );
 
   return {
@@ -945,7 +987,7 @@ async function fetchNews(
 
 export function marketDataSnapshotToCitations(
   snapshot: MarketDataSnapshot | null,
-  startIndex = 1
+  startIndex = 1,
 ): MarketDataCitation[] {
   if (!snapshot) {
     return [];
@@ -963,11 +1005,13 @@ export function marketDataSnapshotToCitations(
 }
 
 export function hasUsableMarketData(snapshot: MarketDataSnapshot | null) {
-  return Boolean(snapshot && ((snapshot.entities?.length || 0) > 0 || (snapshot.news?.length || 0) > 0));
+  return Boolean(
+    snapshot && ((snapshot.entities?.length || 0) > 0 || (snapshot.news?.length || 0) > 0),
+  );
 }
 
 export async function fetchMarketDataSnapshot(
-  request: MarketDataRequest
+  request: MarketDataRequest,
 ): Promise<MarketDataResult> {
   const preferredLanguage = request.preferredLanguage || 'zh';
   const { resolved, unresolved, scope } = await resolveEntities(request);
@@ -985,20 +1029,22 @@ export async function fetchMarketDataSnapshot(
         }
 
         return snapshot;
-      })
+      }),
     );
 
     const { queries, items: news } = await fetchNews(resolved, scope, preferredLanguage);
     const entities = entitySnapshots.filter(Boolean) as MarketEntitySnapshot[];
+    const requestedEntities =
+      flattenEntityHints(request.entities).length > 0
+        ? flattenEntityHints(request.entities)
+        : extractHintsFromQuery(request.query || '');
+
     const snapshot: MarketDataSnapshot = {
       scope,
       entities,
       news,
       diagnostics: {
-        requested_entities:
-          flattenEntityHints(request.entities).length > 0
-            ? flattenEntityHints(request.entities)
-            : extractHintsFromQuery(request.query || ''),
+        requested_entities: requestedEntities,
         resolved_symbols: resolved.map((item) => item.symbol),
         unresolved_entities: unresolved,
         news_queries: queries,
@@ -1010,7 +1056,10 @@ export async function fetchMarketDataSnapshot(
         available: false,
         source: 'yahoo-finance+google-news',
         snapshot,
-        error: unresolved.length > 0 ? `No usable market data resolved for: ${unresolved.join(', ')}` : 'No usable market data available',
+        error:
+          unresolved.length > 0
+            ? `No usable market data resolved for: ${unresolved.join(', ')}`
+            : 'No usable market data available',
       };
     }
 
@@ -1019,12 +1068,13 @@ export async function fetchMarketDataSnapshot(
       source: 'yahoo-finance+google-news',
       snapshot,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       available: false,
       source: 'yahoo-finance+google-news',
       snapshot: null,
-      error: error?.message || 'Unknown market data adapter error',
+      error: error instanceof Error ? error.message : 'Unknown market data adapter error',
     };
   }
 }
+

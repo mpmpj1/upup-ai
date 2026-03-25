@@ -7,9 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
-    "lint": "eslint .",
+    "lint": "eslint \"src/components/research/**/*.{ts,tsx}\" \"src/pages/ResearchWorkspace.tsx\" \"src/pages/ResearchArchive.tsx\" \"src/lib/research.ts\" \"src/lib/research/**/*.ts\" \"src/types/research.ts\" \"supabase/functions/_shared/research*.ts\" \"supabase/functions/_shared/researchPrompts/promptAssets.ts\" \"supabase/functions/_shared/marketDataAdapter.ts\" \"supabase/functions/chat-research/index.ts\" \"supabase/functions/generate-briefing/index.ts\"",
+    "lint:full": "eslint .",
     "preview": "vite preview",
-    "preview:gh-pages": "vite preview --base=/"
+    "preview:gh-pages": "vite preview --base=/",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -69,6 +72,8 @@
     "zustand": "^4.5.2"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.7.0",
+    "@testing-library/react": "^16.3.0",
     "@eslint/js": "^9.9.0",
     "@tailwindcss/typography": "^0.5.15",
     "@types/node": "^22.5.5",
@@ -81,11 +86,13 @@
     "eslint-plugin-react-refresh": "^0.4.9",
     "globals": "^15.9.0",
     "lovable-tagger": "^1.1.7",
+    "jsdom": "^26.1.0",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.11",
     "terser": "^5.43.1",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
-    "vite": "^5.4.1"
+    "vite": "^5.4.1",
+    "vitest": "^2.1.9"
   }
 }

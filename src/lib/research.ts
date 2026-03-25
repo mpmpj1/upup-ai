@@ -1,17 +1,29 @@
 import { supabase } from '@/lib/supabase';
 import type {
   BriefingCard,
+  ChatResearchRequest,
   ChatResearchResponse,
   ConversationMessage,
+  GenerateBriefingRequest,
   GenerateBriefingResponse,
+  JsonObject,
   ProviderConfiguration,
   ResearchConversation,
+  ThesisCardRecord,
 } from '@/types/research';
+
+type FunctionInvokeError = {
+  name?: string;
+  message?: string;
+  context?: {
+    text?: () => Promise<string>;
+  };
+};
 
 function localizeFunctionErrorMessage(message: string) {
   const trimmed = String(message || '').trim();
   if (!trimmed) {
-    return trimmed;
+    return '请求失败，请稍后重试。';
   }
 
   const timeoutMatch = trimmed.match(/timed out after (\d+)ms/i);
@@ -19,42 +31,57 @@ function localizeFunctionErrorMessage(message: string) {
     const milliseconds = Number(timeoutMatch[1]);
     const seconds = Number.isFinite(milliseconds)
       ? (milliseconds / 1000).toFixed(milliseconds % 1000 === 0 ? 0 : 1)
-      : null;
+      : '?';
 
     if (/perplefina/i.test(trimmed)) {
-      return `实时检索服务超时（${seconds || '?'} 秒）。系统可能正在走降级链路，请稍后刷新查看结果。`;
+      return `实时检索超时（${seconds} 秒）。系统已尝试走降级链路，请稍后刷新结果。`;
     }
 
-    if (/briefing-synthesis/i.test(trimmed)) {
-      return `简报综合阶段超时（${seconds || '?'} 秒）。系统已尽量保留可用结果，请稍后刷新查看。`;
-    }
-
-    return `请求超时（${seconds || '?'} 秒），请稍后重试。`;
+    return `请求超时（${seconds} 秒），请稍后重试。`;
   }
 
   return trimmed;
 }
 
-async function unwrapFunctionError(error: any, fallbackMessage: string): Promise<Error> {
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string') {
+      return message;
+    }
+  }
+
+  return '';
+}
+
+async function unwrapFunctionError(
+  error: unknown,
+  fallbackMessage: string,
+): Promise<Error> {
   if (!error) {
     return new Error(fallbackMessage);
   }
 
-  if (error.name === 'FunctionsFetchError') {
-    return new Error('请求等待超时。系统可能仍在后台生成，请稍后刷新会话列表查看结果。');
+  const invokeError = error as FunctionInvokeError;
+  if (invokeError.name === 'FunctionsFetchError') {
+    return new Error('请求超时。系统可能仍在后台处理，请稍后刷新页面查看结果。');
   }
 
-  const context = error.context;
+  const context = invokeError.context;
   if (context && typeof context.text === 'function') {
     try {
       const rawText = await context.text();
       if (rawText) {
         try {
-          const parsed = JSON.parse(rawText);
-          if (parsed?.error) {
+          const parsed = JSON.parse(rawText) as { error?: string; message?: string };
+          if (parsed.error) {
             return new Error(localizeFunctionErrorMessage(parsed.error));
           }
-          if (parsed?.message) {
+          if (parsed.message) {
             return new Error(localizeFunctionErrorMessage(parsed.message));
           }
         } catch {
@@ -62,11 +89,55 @@ async function unwrapFunctionError(error: any, fallbackMessage: string): Promise
         }
       }
     } catch {
-      // Ignore parsing errors and fall through.
+      return new Error(localizeFunctionErrorMessage(getErrorMessage(error) || fallbackMessage));
     }
   }
 
-  return new Error(localizeFunctionErrorMessage(error?.message || fallbackMessage));
+  return new Error(localizeFunctionErrorMessage(getErrorMessage(error) || fallbackMessage));
+}
+
+function hydrateBriefingCard(row: JsonObject): BriefingCard {
+  const providerSnapshot =
+    row.provider_snapshot && typeof row.provider_snapshot === 'object'
+      ? (row.provider_snapshot as JsonObject)
+      : {};
+
+  return {
+    ...(row as unknown as BriefingCard),
+    citations: Array.isArray(row.citations)
+      ? (row.citations as BriefingCard['citations'])
+      : Array.isArray(providerSnapshot.citations)
+        ? (providerSnapshot.citations as BriefingCard['citations'])
+        : [],
+    structured_output:
+      (row.structured_output as BriefingCard['structured_output']) ||
+      (providerSnapshot.structured_output as BriefingCard['structured_output']) ||
+      null,
+    thesis_card:
+      (providerSnapshot.thesis_card as BriefingCard['thesis_card']) || null,
+  };
+}
+
+function hydrateThesisCardRecord(row: JsonObject): ThesisCardRecord {
+  return {
+    ...(row as unknown as ThesisCardRecord),
+    content:
+      (row.content as ThesisCardRecord['content']) || {
+        subject: typeof row.title === 'string' ? row.title : '未命名主题',
+        current_view: '',
+        core_thesis: typeof row.summary === 'string' ? row.summary : '',
+        bull_case: [],
+        bear_case: [],
+        top_key_variables: [],
+        strongest_counterargument: '',
+        mind_change_conditions: [],
+        watch_list: [],
+        last_updated:
+          (typeof row.updated_at === 'string' && row.updated_at) ||
+          (typeof row.created_at === 'string' && row.created_at) ||
+          new Date().toISOString(),
+      },
+  };
 }
 
 export async function getProviderConfigurations(): Promise<ProviderConfiguration[]> {
@@ -88,7 +159,7 @@ export async function saveProviderConfiguration(
     nickname: string;
     provider: string;
     api_key: string;
-  }
+  },
 ) {
   const { data, error } = await supabase.functions.invoke('settings-proxy', {
     body: {
@@ -119,7 +190,9 @@ export async function deleteProviderConfiguration(providerId: string) {
   }
 }
 
-export async function chatResearch(body: Record<string, any>): Promise<ChatResearchResponse> {
+export async function chatResearch(
+  body: ChatResearchRequest,
+): Promise<ChatResearchResponse> {
   const { data, error } = await supabase.functions.invoke('chat-research', {
     body,
   });
@@ -136,7 +209,7 @@ export async function chatResearch(body: Record<string, any>): Promise<ChatResea
 }
 
 export async function generateBriefing(
-  body: Record<string, any>
+  body: GenerateBriefingRequest,
 ): Promise<GenerateBriefingResponse> {
   const { data, error } = await supabase.functions.invoke('generate-briefing', {
     body,
@@ -168,7 +241,7 @@ export async function getConversations(limit = 20): Promise<ResearchConversation
 }
 
 export async function getConversationMessages(
-  conversationId: string
+  conversationId: string,
 ): Promise<ConversationMessage[]> {
   const { data, error } = await supabase
     .from('conversation_messages')
@@ -194,5 +267,19 @@ export async function getBriefings(limit = 20): Promise<BriefingCard[]> {
     throw error;
   }
 
-  return (data || []) as BriefingCard[];
+  return (data || []).map((row) => hydrateBriefingCard(row as JsonObject));
+}
+
+export async function getThesisCards(limit = 20): Promise<ThesisCardRecord[]> {
+  const { data, error } = await supabase
+    .from('thesis_cards')
+    .select('*')
+    .order('updated_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    return [];
+  }
+
+  return (data || []).map((row) => hydrateThesisCardRecord(row as JsonObject));
 }

@@ -7,6 +7,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Loader2, LogIn, AlertCircle, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { buildAppUrl } from "@/lib/appUrl";
+import { getGitHubAuthErrorMessage, isGitHubAuthEnabled } from "@/lib/authProviders";
+import { BRAND_SHORT_NAME } from "@/lib/brand";
 import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
@@ -22,6 +25,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const githubAuthEnabled = isGitHubAuthEnabled();
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -47,22 +51,23 @@ export default function LoginPage() {
 
   const handleGitHubLogin = async () => {
     setError("");
-    setIsLoading(true);
 
-    // Construct the correct redirect URL for GitHub Pages
-    const baseUrl = window.location.origin;
-    const basePath = import.meta.env.BASE_URL || '/';
-    const redirectTo = basePath === '/' ? baseUrl : `${baseUrl}${basePath}`.replace(/\/$/, '');
+    if (!githubAuthEnabled) {
+      setError("GitHub 登录当前未开放，请先使用邮箱登录。");
+      return;
+    }
+
+    setIsLoading(true);
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'github',
       options: {
-        redirectTo: redirectTo
+        redirectTo: buildAppUrl('/')
       }
     });
 
     if (error) {
-      setError(error.message);
+      setError(getGitHubAuthErrorMessage(error.message));
       setIsLoading(false);
     }
   };
@@ -74,7 +79,7 @@ export default function LoginPage() {
         <CardHeader>
           <CardTitle>Sign In</CardTitle>
           <CardDescription>
-            Sign in to your TradingGoose account
+            Sign in to your {BRAND_SHORT_NAME} account
           </CardDescription>
         </CardHeader>
 
@@ -141,7 +146,7 @@ export default function LoginPage() {
               </Alert>
             )}
 
-            {publicRegistrationEnabled && (
+            {githubAuthEnabled && (
               <>
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">

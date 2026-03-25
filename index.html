@@ -5,18 +5,18 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/x-icon" href="/favicon.ico" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TradingGoose - AI Trading Analytical Workflow</title>
+  <title>涨涨AI UpUp AI - 低噪音 AI 基金经理</title>
   <meta name="description"
-    content="Advanced LLM-powered analytical workflow tool with 15 specialized AI agents for comprehensive market analysis, research synthesis, and trading decision support. Open-source trading intelligence platform." />
-  <meta name="author" content="TradingGoose" />
+    content="涨涨AI UpUp AI 是一个只答金融的低噪音 AI 基金经理，专注股票、基金、财报、公司、行业、宏观与市场研究。" />
+  <meta name="author" content="UpUp AI" />
   <meta name="keywords"
     content="LLM trading analysis, AI market research, multi-agent workflow, trading intelligence, financial analysis AI, market analysis tool, trading decision support, AI research synthesis, open source trading" />
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
   <link rel="canonical" href="https://trading-goose.github.io/" />
 
-  <meta property="og:title" content="TradingGoose - AI Trading Analytical Workflow" />
+  <meta property="og:title" content="涨涨AI UpUp AI - 低噪音 AI 基金经理" />
   <meta property="og:description"
-    content="Advanced LLM-powered analytical workflow tool with 15 specialized AI agents for comprehensive market analysis, research synthesis, and trading decision support." />
+    content="只答金融，先给结论，再给关键论据、风险点、情景分析与来源。" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://trading-goose.github.io/" />
   <meta property="og:image" content="https://trading-goose.github.io/Social-Preview.png" />
@@ -28,9 +28,9 @@
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:site" content="@tradinggoose" />
   <meta name="twitter:creator" content="@tradinggoose" />
-  <meta name="twitter:title" content="TradingGoose - LLM Trading Analysis Workflow" />
+  <meta name="twitter:title" content="涨涨AI UpUp AI - AI 基金经理" />
   <meta name="twitter:description"
-    content="Advanced LLM-powered analytical workflow tool with 15 specialized AI agents for market research and trading intelligence." />
+    content="只答金融，低噪音输出研究观点、晨报、一页纸和来源引用。" />
   <meta name="twitter:image" content="https://trading-goose.github.io/Social-Preview.png" />
   <meta name="twitter:image:alt" content="TradingGoose - Multi-LLM-Agents Trading Workflow" />
 
@@ -159,119 +159,11 @@
       })();
   </script>
 
-  <!-- Microsoft Bing Site Verification -->
-  <meta name="msvalidate.01" content="CA673B5FD31F6456CAA9E0F4BC93B302" />
-
-  <!-- Google AdSense -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9651663494022087"
-    crossorigin="anonymous"></script>
-
-  <!-- Google tag (gtag.js) Google Analytics -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-HYXMNMH4WX"></script>
-  <meta name="google-site-verification" content="RGqWpfEuBY2QbIjdRZDz1iwTcjyAa6O2_3uKmAvEftU" />
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag() { dataLayer.push(arguments); }
-    gtag('js', new Date());
-    gtag('config', 'G-HYXMNMH4WX');
-  </script>
-
-  <!-- Twitter conversion tracking base code -->
-  <script>
-    !function (e, t, n, s, u, a) {
-      e.twq || (s = e.twq = function () {
-        s.exe ? s.exe.apply(s, arguments) : s.queue.push(arguments);
-      }, s.version = '1.1', s.queue = [], u = t.createElement(n), u.async = !0, u.src = 'https://static.ads-twitter.com/uwt.js',
-        a = t.getElementsByTagName(n)[0], a.parentNode.insertBefore(u, a))
-    }(window, document, 'script');
-    twq('config', 'ql07b');
-  </script>
-  <!-- End Twitter conversion tracking base code -->
-
 </head>
 
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
-
-  <!-- Widgetbot Crate for Discord -->
-  <script src="https://cdn.jsdelivr.net/npm/@widgetbot/crate@3" async defer></script>
-  <script>
-    // Pages where the widget should be hidden
-    const HIDDEN_PAGES = [
-      '/login',
-      '/register',
-      '/reset-password',
-      '/admin',
-      '/settings'
-    ];
-
-    // Function to check if widget should be shown on current page
-    function shouldShowWidget() {
-      const currentPath = window.location.pathname.toLowerCase();
-      return !HIDDEN_PAGES.some(page => currentPath.startsWith(page));
-    }
-
-    // Wait for page to fully load before initializing Widgetbot
-    window.addEventListener('load', function () {
-      // Only initialize widget if it should be shown on this page
-      if (shouldShowWidget()) {
-        // 3 second delay after page load with fade-in animation
-        setTimeout(function () {
-          window.discordCrate = new Crate({
-            server: '1410785898273964166', // Replace with your Discord server ID
-            channel: '1411018265299521627', // Replace with your Discord channel ID
-            location: ['bottom', 'right'], // Position at bottom right
-            color: '#ffcc00', // Discord's default color, you can change this
-            notifications: true, // Show notification badge
-            indicator: true, // Show unread message indicator
-            defer: true,
-            css: `
-              @keyframes fadeInScale {
-                0% {
-                  opacity: 0;
-                  transform: scale(0.8);
-                }
-                100% {
-                  opacity: 1;
-                  transform: scale(1);
-                }
-              }
-              
-              &[open="false"] {
-                animation: fadeInScale 0.5s ease-out forwards;
-              }
-            `
-          });
-        }, 2000); // 2 seconds delay after page load
-      }
-    });
-
-    // Listen for route changes (for single-page applications)
-    let lastPath = window.location.pathname;
-    setInterval(function () {
-      if (window.location.pathname !== lastPath) {
-        lastPath = window.location.pathname;
-
-        // Hide or show widget based on new page
-        if (window.discordCrate) {
-          if (shouldShowWidget()) {
-            // Show the widget if it was hidden
-            const crateElement = document.querySelector('widgetbot-crate');
-            if (crateElement) {
-              crateElement.style.display = 'block';
-            }
-          } else {
-            // Hide the widget
-            const crateElement = document.querySelector('widgetbot-crate');
-            if (crateElement) {
-              crateElement.style.display = 'none';
-            }
-          }
-        }
-      }
-    }, 100); // Check every 100ms for route changes
-  </script>
 </body>
 
 </html>

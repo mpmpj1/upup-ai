@@ -75,7 +75,7 @@ export async function verifyAndExtractUser(authHeader: string | null): Promise<A
       console.error('Error checking token expiration:', e);
     }
 
-    // Verify the token against Supabase to ensure it hasn't been revoked
+    // Verify the token against Supabase to ensure it is a real project token
     const client = getAdminClient();
     if (!client) {
       console.error('Supabase service credentials missing - falling back to decoded token validation only');
@@ -85,22 +85,27 @@ export async function verifyAndExtractUser(authHeader: string | null): Promise<A
     try {
       const { data, error } = await client.auth.getUser(token);
       if (error) {
-        console.error('Supabase auth verification error, falling back to decoded token:', error.message);
-      } else if (data?.user) {
-        if (data.user.id !== userId) {
-          console.error('Token subject does not match Supabase user id', {
-            tokenSub: userId,
-            supabaseUser: data.user.id,
-          });
-          return { userId: null, error: 'Authentication failed' };
-        }
+        console.error('Supabase auth verification error:', error.message);
+        return { userId: null, error: 'Authentication failed' };
+      }
+
+      if (!data?.user) {
+        console.error('Supabase auth verification returned no user');
+        return { userId: null, error: 'Authentication failed' };
+      }
+
+      if (data.user.id !== userId) {
+        console.error('Token subject does not match Supabase user id', {
+          tokenSub: userId,
+          supabaseUser: data.user.id,
+        });
+        return { userId: null, error: 'Authentication failed' };
       }
     } catch (verificationError) {
-      console.error('Unexpected error verifying token with Supabase, falling back to decoded token:', verificationError);
+      console.error('Unexpected error verifying token with Supabase:', verificationError);
+      return { userId: null, error: 'Token verification failed' };
     }
 
-    // For Edge Functions, we trust the JWT if it's properly formatted and not expired
-    // Supabase already validates it at the gateway level
     return { userId, error: null };
   } catch (error) {
     console.error('Error verifying token:', error);

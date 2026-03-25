@@ -31,6 +31,8 @@ no_verify_jwt_functions=(
   "alpaca-batch"
   "alpaca-proxy"
   "settings-proxy"
+  "chat-research"
+  "generate-briefing"
   "execute-trade"
   "analysis-coordinator"
   "rebalance-coordinator"

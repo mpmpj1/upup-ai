@@ -6,10 +6,10 @@ export default function ResetPasswordPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if we have the recovery token in the URL hash
+    const queryParams = new URLSearchParams(window.location.search);
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const type = hashParams.get('type');
-    const accessToken = hashParams.get('access_token');
+    const type = queryParams.get('type') ?? hashParams.get('type');
+    const accessToken = hashParams.get('access_token') ?? queryParams.get('access_token');
     
     console.log('ResetPasswordPage - URL hash params:', {
       type,

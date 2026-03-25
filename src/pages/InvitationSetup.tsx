@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Lock, CheckCircle, AlertCircle, Eye, EyeOff, User } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
+import { BRAND_SHORT_NAME } from "@/lib/brand";
 
 export default function InvitationSetup() {
   const navigate = useNavigate();
@@ -30,26 +31,19 @@ export default function InvitationSetup() {
       console.log('Current URL:', window.location.href);
       console.log('URL Hash:', window.location.hash);
       
-      // Check if we have tokens in the hash
+      const queryParams = new URLSearchParams(window.location.search);
       const hash = window.location.hash;
-      if (!hash) {
-        console.error('No hash found in URL');
-        setError('Invalid invitation link - no authentication tokens found');
-        setIsProcessing(false);
-        setTimeout(() => navigate('/login'), 5000);
-        return;
-      }
-
-      // Parse hash parameters
       const hashParams = new URLSearchParams(hash.substring(1));
-      const accessToken = hashParams.get('access_token');
-      const refreshToken = hashParams.get('refresh_token');
-      const type = hashParams.get('type');
+      const accessToken = hashParams.get('access_token') ?? queryParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token') ?? queryParams.get('refresh_token');
+      const type = queryParams.get('type') ?? hashParams.get('type');
+      const code = queryParams.get('code');
       
       console.log('Token details:', {
         type,
         hasAccessToken: !!accessToken,
         hasRefreshToken: !!refreshToken,
+        hasCode: !!code,
         tokenLength: accessToken?.length
       });
 
@@ -66,36 +60,57 @@ export default function InvitationSetup() {
         // For invitation tokens that have been verified by Supabase and redirected here,
         // we should have access_token and refresh_token in the URL hash.
         // We just need to set the session using these tokens.
-        
-        if (!accessToken || !refreshToken) {
-          throw new Error('Missing authentication tokens. Please request a new invitation.');
+        let establishedSession = null;
+
+        if (code && !accessToken && !refreshToken) {
+          const { data: exchangeData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+
+          if (exchangeError) {
+            throw new Error(`Failed to authenticate: ${exchangeError.message}`);
+          }
+
+          if (!exchangeData.session || !exchangeData.session.user) {
+            throw new Error('Session was not established properly');
+          }
+
+          console.log('Session established successfully through auth code exchange');
+          establishedSession = exchangeData.session;
+        } else {
+          if (!accessToken || !refreshToken) {
+            throw new Error('Missing authentication tokens. Please request a new invitation.');
+          }
+
+          console.log('Setting session with provided tokens...');
+          
+          // First, clear any existing URL hash to prevent Supabase from re-processing it
+          window.history.replaceState(null, '', window.location.pathname + window.location.search);
+          
+          const { data: sessionData, error: setSessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          });
+          
+          console.log('setSession result:', { sessionData, setSessionError });
+          
+          if (setSessionError) {
+            console.error('Error setting session:', setSessionError);
+            throw new Error(`Failed to authenticate: ${setSessionError.message}`);
+          }
+          
+          if (!sessionData.session || !sessionData.session.user) {
+            throw new Error('Session was not established properly');
+          }
+
+          console.log('Session established successfully');
+          console.log('Authenticated as:', sessionData.session.user.email);
+          establishedSession = sessionData.session;
         }
 
-        console.log('Setting session with provided tokens...');
-        
-        // First, clear any existing URL hash to prevent Supabase from re-processing it
-        window.history.replaceState(null, '', window.location.pathname + window.location.search);
-        
-        const { data: sessionData, error: setSessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken
-        });
-        
-        console.log('setSession result:', { sessionData, setSessionError });
-        
-        if (setSessionError) {
-          console.error('Error setting session:', setSessionError);
-          throw new Error(`Failed to authenticate: ${setSessionError.message}`);
-        }
-        
-        if (!sessionData.session || !sessionData.session.user) {
+        if (!establishedSession?.user) {
           throw new Error('Session was not established properly');
         }
 
-        console.log('Session established successfully');
-        console.log('Authenticated as:', sessionData.session.user.email);
-        
-        const currentUser = sessionData.session.user;
+        const currentUser = establishedSession.user;
         setUserEmail(currentUser.email || '');
         
         // Check if user already completed setup directly from the session
@@ -124,7 +139,7 @@ export default function InvitationSetup() {
 
         // Update auth store with the session
         useAuth.setState({ 
-          session: sessionData.session,
+          session: establishedSession,
           user: currentUser,
           isAuthenticated: true,
           isLoading: false
@@ -290,7 +305,7 @@ export default function InvitationSetup() {
             <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
               <CheckCircle className="h-6 w-6 text-green-600" />
             </div>
-            <CardTitle>Welcome to TradingGoose!</CardTitle>
+            <CardTitle>Welcome to {BRAND_SHORT_NAME}!</CardTitle>
             <CardDescription className="mt-2">
               Your account has been set up successfully
             </CardDescription>

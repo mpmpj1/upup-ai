@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { initializeAuth, useAuth } from '@/lib/auth';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import { identifyUser } from '@/hooks/usePostHog';
 import posthog from '@/lib/posthog';
 
@@ -15,7 +16,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Initialize authentication when app starts - this is idempotent
-    initializeAuth();
+    if (isSupabaseConfigured) {
+      initializeAuth();
+    }
     
     // Clean up on unmount (important for preventing memory leaks)
     return () => {

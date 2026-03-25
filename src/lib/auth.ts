@@ -5,6 +5,7 @@ import { supabase } from './supabase';
 import type { ApiSettings, Profile } from './supabase';
 import { getCachedSession, clearSessionCache, updateCachedSession } from './cachedAuth';
 import type { User, Session } from '@supabase/supabase-js';
+import { buildAppUrl, isCurrentAppRoute } from './appUrl';
 
 interface AuthState {
   // Core state
@@ -92,7 +93,7 @@ export const useAuth = create<AuthState>()(
         }
 
         // Check if we're on the invitation setup page
-        const isInvitationSetup = window.location.pathname === '/invitation-setup';
+        const isInvitationSetup = isCurrentAppRoute('/invitation-setup');
         if (isInvitationSetup) {
           console.log('🔐 Auth: On invitation setup page, skipping initialization');
           return;
@@ -541,6 +542,7 @@ export const useAuth = create<AuthState>()(
             email,
             password,
             options: {
+              emailRedirectTo: buildAppUrl('/auth/confirm'),
               data: { name: username, username }
             }
           });
@@ -585,7 +587,7 @@ export const useAuth = create<AuthState>()(
       resetPassword: async (email: string) => {
         try {
           const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${window.location.origin}/reset-password`,
+            redirectTo: buildAppUrl('/reset-password'),
           });
 
           if (error) {
@@ -939,7 +941,7 @@ export const initializeAuth = () => {
     const currentState = useAuth.getState();
 
     // Check if we're on the invitation setup page
-    const isInvitationSetup = window.location.pathname === '/invitation-setup';
+    const isInvitationSetup = isCurrentAppRoute('/invitation-setup');
 
     if (event === 'SIGNED_IN') {
       // Skip initialization if we're on the invitation setup page

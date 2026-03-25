@@ -4,7 +4,37 @@ import { maskCredential, isMaskedValue } from '../utils/credentialHelpers.ts';
 import { getUserProviderConfigurations } from '../utils/dbHelpers.ts';
 import { validateApiKey } from '../../_shared/apiValidator.ts';
 
-export async function handleGetProviderConfigurations(supabase: SupabaseClient, userId: string): Promise<Response> {
+function parseExtraHeaders(value: any): Record<string, string> {
+  if (!value) {
+    return {};
+  }
+
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, headerValue]) => [key, String(headerValue)])
+    );
+  }
+
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return Object.fromEntries(
+          Object.entries(parsed).map(([key, headerValue]) => [key, String(headerValue)])
+        );
+      }
+    } catch (_error) {
+      return {};
+    }
+  }
+
+  return {};
+}
+
+export async function handleGetProviderConfigurations(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<Response> {
   const { configurations, error } = await getUserProviderConfigurations(supabase, userId);
 
   if (error) {
@@ -12,23 +42,25 @@ export async function handleGetProviderConfigurations(supabase: SupabaseClient, 
     return createSuccessResponse({ configurations: [] });
   }
 
-  // Mask API keys in configurations
-  const maskedConfigurations = configurations.map(config => ({
+  const maskedConfigurations = configurations.map((config) => ({
     ...config,
-    api_key: maskCredential(config.api_key)
+    api_key: maskCredential(config.api_key),
   }));
 
   return createSuccessResponse({ configurations: maskedConfigurations });
 }
 
-export async function handleSaveProviderConfiguration(supabase: SupabaseClient, userId: string, body: any): Promise<Response> {
+export async function handleSaveProviderConfiguration(
+  supabase: SupabaseClient,
+  userId: string,
+  body: any
+): Promise<Response> {
   const { provider } = body;
 
   if (!provider) {
     return createErrorResponse('Provider configuration required');
   }
 
-  // Get current configuration if updating
   let currentConfig = null;
   if (provider.id) {
     const { data } = await supabase
@@ -40,41 +72,50 @@ export async function handleSaveProviderConfiguration(supabase: SupabaseClient, 
     currentConfig = data;
   }
 
-  // Check if API key is masked and matches current
   let finalApiKey = provider.api_key;
   let isNewApiKey = false;
-  
-  // First check if the provided value looks like a masked value
+
   if (isMaskedValue(provider.api_key)) {
-    // If it's masked, it MUST match the current masked value exactly
-    if (currentConfig && currentConfig.api_key) {
+    if (currentConfig?.api_key) {
       const currentMasked = maskCredential(currentConfig.api_key);
       if (provider.api_key === currentMasked) {
-        // Masked value matches - keep the original unmasked value
         finalApiKey = currentConfig.api_key;
       } else {
-        // Masked value doesn't match - this is suspicious!
-        return createErrorResponse('Invalid masked API key provided. Please enter a new API key or leave unchanged.');
+        return createErrorResponse('Invalid masked API key provided. Please enter a new API key.');
       }
     } else {
-      // No current config but user sent masked value - reject this
-      return createErrorResponse('Cannot use masked API key for new configuration. Please provide actual API key.');
+      return createErrorResponse('Cannot use masked API key for a new configuration.');
     }
   } else if (provider.api_key) {
-    // Not masked - treat as new API key
     isNewApiKey = true;
   } else if (!provider.api_key && currentConfig) {
-    // No API key provided but config exists - keep current
     finalApiKey = currentConfig.api_key;
   } else {
-    // No API key and no current config
     return createErrorResponse('API key is required');
   }
 
-  // Validate new API keys before saving
-  if (isNewApiKey && finalApiKey) {
+  const normalizedExtraHeaders = parseExtraHeaders(provider.extra_headers_json);
+  const shouldSkipRemoteValidation =
+    Boolean(provider.base_url) ||
+    provider.provider_type === 'openai-compatible' ||
+    provider.provider_type === 'gateway' ||
+    Boolean(provider.is_openai_compatible);
+
+  if (isNewApiKey && finalApiKey && !shouldSkipRemoteValidation) {
     try {
-      const validation = await validateApiKey(provider.provider, finalApiKey);
+      const validation = await validateApiKey(
+        provider.provider,
+        finalApiKey,
+        provider.model,
+        undefined,
+        {
+          baseUrl: provider.base_url,
+          extraHeaders: normalizedExtraHeaders,
+          isOpenAICompatible: provider.is_openai_compatible,
+          providerType: provider.provider_type,
+        }
+      );
+
       if (!validation.valid) {
         return createErrorResponse(`API key validation failed: ${validation.message}`);
       }
@@ -82,21 +123,37 @@ export async function handleSaveProviderConfiguration(supabase: SupabaseClient, 
       console.error('API validation error:', error);
       return createErrorResponse(`API key validation failed: ${error.message}`);
     }
+  } else if (isNewApiKey && finalApiKey && shouldSkipRemoteValidation) {
+    console.log(
+      `Skipping remote API validation for gateway/openai-compatible provider: ${provider.provider}`
+    );
   }
 
-  // Upsert the configuration
+  if (provider.is_default) {
+    await supabase
+      .from('provider_configurations')
+      .update({ is_default: false })
+      .eq('user_id', userId);
+  }
+
   const configData = {
     user_id: userId,
     nickname: provider.nickname,
     provider: provider.provider,
     api_key: finalApiKey,
-    is_default: provider.is_default || false,
-    updated_at: new Date().toISOString()
+    model: provider.model || null,
+    base_url: provider.base_url || null,
+    provider_type: provider.provider_type || 'direct',
+    extra_headers_json: normalizedExtraHeaders,
+    is_openai_compatible: Boolean(provider.is_openai_compatible),
+    description: provider.description || null,
+    enabled: provider.enabled !== false,
+    is_default: Boolean(provider.is_default),
+    updated_at: new Date().toISOString(),
   };
 
   let result;
   if (provider.id && currentConfig) {
-    // Update existing
     const { data, error } = await supabase
       .from('provider_configurations')
       .update(configData)
@@ -106,7 +163,6 @@ export async function handleSaveProviderConfiguration(supabase: SupabaseClient, 
       .single();
     result = { data, error };
   } else {
-    // Insert new
     const { data, error } = await supabase
       .from('provider_configurations')
       .insert(configData)
@@ -120,10 +176,9 @@ export async function handleSaveProviderConfiguration(supabase: SupabaseClient, 
     return createErrorResponse(result.error.message);
   }
 
-  // Return with masked API key
   const savedConfig = {
     ...result.data,
-    api_key: maskCredential(result.data.api_key)
+    api_key: maskCredential(result.data.api_key),
   };
 
   return createSuccessResponse({ success: true, configuration: savedConfig });

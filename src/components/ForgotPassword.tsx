@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Mail, ArrowLeft, CheckCircle, AlertCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { buildAppUrl } from "@/lib/appUrl";
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
@@ -22,8 +23,7 @@ export default function ForgotPassword() {
 
     try {
       // Build the correct redirect URL
-      const origin = window.location.origin;
-      const redirectUrl = `${origin}/reset-password`;
+      const redirectUrl = buildAppUrl('/reset-password');
 
       console.log('Sending password reset email to:', email);
       console.log('Redirect URL:', redirectUrl);

@@ -1,12 +1,22 @@
 import { createClient } from '@supabase/supabase-js';
+import { buildAppUrl } from './appUrl';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
+const configuredSupabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const configuredSupabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
 
-if (!supabaseUrl || !supabasePublishableKey) {
+export const isSupabaseConfigured = Boolean(
+  configuredSupabaseUrl && configuredSupabasePublishableKey
+);
+
+const supabaseUrl =
+  configuredSupabaseUrl || 'https://placeholder.supabase.co';
+const supabasePublishableKey =
+  configuredSupabasePublishableKey || 'public-anon-key-placeholder';
+
+if (!isSupabaseConfigured) {
   console.error('Supabase configuration missing!', {
-    url: supabaseUrl ? 'Set' : 'Missing',
-    key: supabasePublishableKey ? 'Set' : 'Missing'
+    url: configuredSupabaseUrl ? 'Set' : 'Missing',
+    key: configuredSupabasePublishableKey ? 'Set' : 'Missing'
   });
 }
 
@@ -489,7 +499,7 @@ export const supabaseHelpers = {
     try {
       const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
         data: userData || {},
-        redirectTo: `${window.location.origin}/invitation-setup`
+        redirectTo: buildAppUrl('/invitation-setup')
       });
 
       if (error) {

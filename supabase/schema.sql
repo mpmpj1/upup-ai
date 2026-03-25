@@ -6920,4 +6920,298 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 
 
 
+ALTER TABLE IF EXISTS public.provider_configurations
+    ADD COLUMN IF NOT EXISTS model text,
+    ADD COLUMN IF NOT EXISTS base_url text,
+    ADD COLUMN IF NOT EXISTS provider_type text DEFAULT 'direct',
+    ADD COLUMN IF NOT EXISTS extra_headers_json jsonb DEFAULT '{}'::jsonb,
+    ADD COLUMN IF NOT EXISTS is_openai_compatible boolean DEFAULT false,
+    ADD COLUMN IF NOT EXISTS description text,
+    ADD COLUMN IF NOT EXISTS enabled boolean DEFAULT true;
+
+CREATE TABLE IF NOT EXISTS public.conversations (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    title text NOT NULL,
+    market_scope text DEFAULT 'multi-market',
+    entity_context jsonb DEFAULT '{}'::jsonb,
+    status text DEFAULT 'active',
+    last_message_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS public.briefings (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    conversation_id uuid REFERENCES public.conversations(id) ON DELETE SET NULL,
+    briefing_type text NOT NULL,
+    market_scope text DEFAULT 'multi-market',
+    watch_entities jsonb DEFAULT '[]'::jsonb,
+    style_profile jsonb DEFAULT '{}'::jsonb,
+    title text NOT NULL,
+    summary text,
+    content text NOT NULL,
+    stance jsonb DEFAULT '{}'::jsonb,
+    theses jsonb DEFAULT '{"bull":[],"bear":[]}'::jsonb,
+    scenarios jsonb DEFAULT '[]'::jsonb,
+    risks jsonb DEFAULT '[]'::jsonb,
+    compliance_flags jsonb DEFAULT '[]'::jsonb,
+    provider_snapshot jsonb DEFAULT '{}'::jsonb,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS public.research_runs (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    conversation_id uuid REFERENCES public.conversations(id) ON DELETE SET NULL,
+    briefing_id uuid REFERENCES public.briefings(id) ON DELETE SET NULL,
+    analysis_history_id uuid REFERENCES public.analysis_history(id) ON DELETE SET NULL,
+    query text NOT NULL,
+    market_scope text DEFAULT 'multi-market',
+    entity_context jsonb DEFAULT '{}'::jsonb,
+    output_mode text DEFAULT 'research-note',
+    answer text NOT NULL,
+    stance jsonb DEFAULT '{}'::jsonb,
+    theses jsonb DEFAULT '{"bull":[],"bear":[]}'::jsonb,
+    scenarios jsonb DEFAULT '[]'::jsonb,
+    risks jsonb DEFAULT '[]'::jsonb,
+    compliance_flags jsonb DEFAULT '[]'::jsonb,
+    provider_snapshot jsonb DEFAULT '{}'::jsonb,
+    source_summary jsonb DEFAULT '{}'::jsonb,
+    status text DEFAULT 'completed',
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS public.conversation_messages (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    conversation_id uuid NOT NULL REFERENCES public.conversations(id) ON DELETE CASCADE,
+    user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    role text NOT NULL,
+    content text NOT NULL,
+    structured_answer jsonb,
+    market_scope text DEFAULT 'multi-market',
+    entity_context jsonb DEFAULT '{}'::jsonb,
+    research_run_id uuid REFERENCES public.research_runs(id) ON DELETE SET NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS public.citations (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    research_run_id uuid REFERENCES public.research_runs(id) ON DELETE CASCADE,
+    conversation_id uuid REFERENCES public.conversations(id) ON DELETE CASCADE,
+    briefing_id uuid REFERENCES public.briefings(id) ON DELETE CASCADE,
+    title text NOT NULL,
+    url text NOT NULL,
+    publisher text,
+    snippet text,
+    source_tier integer DEFAULT 2,
+    source_type text DEFAULT 'media',
+    metadata jsonb DEFAULT '{}'::jsonb,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_conversations_user_last_message
+    ON public.conversations(user_id, last_message_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_conversation_messages_conversation_created
+    ON public.conversation_messages(conversation_id, created_at ASC);
+
+CREATE INDEX IF NOT EXISTS idx_briefings_user_created
+    ON public.briefings(user_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_research_runs_user_created
+    ON public.research_runs(user_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_citations_research_run
+    ON public.citations(research_run_id);
+
+ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.conversation_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.briefings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.research_runs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.citations ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'conversations' AND policyname = 'Users can manage own conversations'
+    ) THEN
+        CREATE POLICY "Users can manage own conversations"
+            ON public.conversations
+            USING (user_id = auth.uid())
+            WITH CHECK (user_id = auth.uid());
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'conversation_messages' AND policyname = 'Users can manage own conversation messages'
+    ) THEN
+        CREATE POLICY "Users can manage own conversation messages"
+            ON public.conversation_messages
+            USING (user_id = auth.uid())
+            WITH CHECK (user_id = auth.uid());
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'briefings' AND policyname = 'Users can manage own briefings'
+    ) THEN
+        CREATE POLICY "Users can manage own briefings"
+            ON public.briefings
+            USING (user_id = auth.uid())
+            WITH CHECK (user_id = auth.uid());
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'research_runs' AND policyname = 'Users can manage own research runs'
+    ) THEN
+        CREATE POLICY "Users can manage own research runs"
+            ON public.research_runs
+            USING (user_id = auth.uid())
+            WITH CHECK (user_id = auth.uid());
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'citations' AND policyname = 'Users can view own citations'
+    ) THEN
+        CREATE POLICY "Users can view own citations"
+            ON public.citations
+            USING (user_id = auth.uid())
+            WITH CHECK (user_id = auth.uid());
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'conversations' AND policyname = 'Service role full access to conversations'
+    ) THEN
+        CREATE POLICY "Service role full access to conversations"
+            ON public.conversations
+            TO service_role
+            USING (true)
+            WITH CHECK (true);
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'conversation_messages' AND policyname = 'Service role full access to conversation messages'
+    ) THEN
+        CREATE POLICY "Service role full access to conversation messages"
+            ON public.conversation_messages
+            TO service_role
+            USING (true)
+            WITH CHECK (true);
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'briefings' AND policyname = 'Service role full access to briefings'
+    ) THEN
+        CREATE POLICY "Service role full access to briefings"
+            ON public.briefings
+            TO service_role
+            USING (true)
+            WITH CHECK (true);
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'research_runs' AND policyname = 'Service role full access to research runs'
+    ) THEN
+        CREATE POLICY "Service role full access to research runs"
+            ON public.research_runs
+            TO service_role
+            USING (true)
+            WITH CHECK (true);
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'citations' AND policyname = 'Service role full access to citations'
+    ) THEN
+        CREATE POLICY "Service role full access to citations"
+            ON public.citations
+            TO service_role
+            USING (true)
+            WITH CHECK (true);
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'update_conversations_updated_at'
+    ) THEN
+        CREATE TRIGGER update_conversations_updated_at
+            BEFORE UPDATE ON public.conversations
+            FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'update_briefings_updated_at'
+    ) THEN
+        CREATE TRIGGER update_briefings_updated_at
+            BEFORE UPDATE ON public.briefings
+            FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'update_research_runs_updated_at'
+    ) THEN
+        CREATE TRIGGER update_research_runs_updated_at
+            BEFORE UPDATE ON public.research_runs
+            FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+    END IF;
+END $$;
+
+GRANT ALL ON TABLE public.conversations TO authenticated;
+GRANT ALL ON TABLE public.conversations TO service_role;
+GRANT ALL ON TABLE public.conversation_messages TO authenticated;
+GRANT ALL ON TABLE public.conversation_messages TO service_role;
+GRANT ALL ON TABLE public.briefings TO authenticated;
+GRANT ALL ON TABLE public.briefings TO service_role;
+GRANT ALL ON TABLE public.research_runs TO authenticated;
+GRANT ALL ON TABLE public.research_runs TO service_role;
+GRANT ALL ON TABLE public.citations TO authenticated;
+GRANT ALL ON TABLE public.citations TO service_role;
+
 RESET ALL;

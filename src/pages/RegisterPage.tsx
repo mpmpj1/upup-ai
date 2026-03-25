@@ -7,6 +7,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Loader2, UserPlus, AlertCircle, ArrowLeft, Mail, CheckCircle, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { buildAppUrl } from "@/lib/appUrl";
+import { getGitHubAuthErrorMessage, isGitHubAuthEnabled } from "@/lib/authProviders";
+import { BRAND_SHORT_NAME } from "@/lib/brand";
 import { supabase } from "@/lib/supabase";
 
 declare global {
@@ -14,6 +17,8 @@ declare global {
     twq?: (...args: unknown[]) => void;
   }
 }
+
+const PENDING_REGISTRATION_EMAIL_KEY = 'pending-registration-email';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -33,6 +38,7 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const githubAuthEnabled = isGitHubAuthEnabled();
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -98,6 +104,7 @@ export default function RegisterPage() {
       setIsLoading(false);
 
       if (result.success) {
+        sessionStorage.setItem(PENDING_REGISTRATION_EMAIL_KEY, email.trim());
         setSuccessMessage("Registration successful! Please check your email to verify your account.");
         setError("");
         setLastRegisteredEmail(email);
@@ -118,22 +125,23 @@ export default function RegisterPage() {
 
   const handleGitHubSignUp = async () => {
     setError("");
-    setIsLoading(true);
 
-    // Construct the correct redirect URL for GitHub Pages
-    const baseUrl = window.location.origin;
-    const basePath = import.meta.env.BASE_URL || '/';
-    const redirectTo = basePath === '/' ? baseUrl : `${baseUrl}${basePath}`.replace(/\/$/, '');
+    if (!githubAuthEnabled) {
+      setError("GitHub 注册当前未开放，请先使用邮箱注册。");
+      return;
+    }
+
+    setIsLoading(true);
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'github',
       options: {
-        redirectTo: redirectTo
+        redirectTo: buildAppUrl('/')
       }
     });
 
     if (error) {
-      setError(error.message);
+      setError(getGitHubAuthErrorMessage(error.message));
       setIsLoading(false);
     }
   };
@@ -183,7 +191,7 @@ export default function RegisterPage() {
           <CardHeader>
             <CardTitle>Closed Beta Testing</CardTitle>
             <CardDescription>
-              TradingGoose is currently in closed beta
+              {BRAND_SHORT_NAME} is currently in closed beta
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -240,7 +248,7 @@ export default function RegisterPage() {
         <CardHeader>
           <CardTitle>Create Account</CardTitle>
           <CardDescription>
-            Get started with TradingGoose today
+            Get started with {BRAND_SHORT_NAME} today
           </CardDescription>
         </CardHeader>
 
@@ -351,31 +359,35 @@ export default function RegisterPage() {
               </Alert>
             )}
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Or sign up with
-                </span>
-              </div>
-            </div>
+            {githubAuthEnabled && (
+              <>
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      Or sign up with
+                    </span>
+                  </div>
+                </div>
 
-            <div className="flex flex-col gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full hover:bg-neutral-950 hover:text-white transition-colors"
-                onClick={handleGitHubSignUp}
-                disabled={isLoading}
-              >
-                <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-                </svg>
-                GitHub
-              </Button>
-            </div>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full hover:bg-neutral-950 hover:text-white transition-colors"
+                    onClick={handleGitHubSignUp}
+                    disabled={isLoading}
+                  >
+                    <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                    </svg>
+                    GitHub
+                  </Button>
+                </div>
+              </>
+            )}
           </CardContent>
 
           <CardFooter className="flex flex-col space-y-4">

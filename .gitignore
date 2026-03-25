@@ -26,3 +26,8 @@ dist-ssr
 /todo-list
 console.txt
 console.json
+supabase/functions/.env
+supabase/functions/.env.local
+supabase/functions/.env.development
+supabase/functions/.env.production
+supabase/.temp/

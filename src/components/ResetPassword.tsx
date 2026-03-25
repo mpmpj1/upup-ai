@@ -24,18 +24,24 @@ export default function ResetPassword() {
     // Handle the password recovery token from the URL
     const handlePasswordRecovery = async () => {
       try {
-        // Get the hash from the URL (Supabase sends the token in the hash)
+        const queryParams = new URLSearchParams(window.location.search);
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const accessToken = hashParams.get('access_token');
-        const type = hashParams.get('type');
-        const errorCode = hashParams.get('error_code');
-        const errorDescription = hashParams.get('error_description');
+        const accessToken = hashParams.get('access_token') ?? queryParams.get('access_token');
+        const type = queryParams.get('type') ?? hashParams.get('type');
+        const tokenHash = queryParams.get('token_hash') ?? hashParams.get('token_hash');
+        const code = queryParams.get('code');
+        const errorCode = queryParams.get('error_code') ?? hashParams.get('error_code');
+        const errorDescription =
+          queryParams.get('error_description') ?? hashParams.get('error_description');
         
         console.log('ResetPassword - Hash params:', { 
           type, 
           hasAccessToken: !!accessToken,
+          hasTokenHash: !!tokenHash,
+          hasCode: !!code,
           errorCode,
           errorDescription,
+          fullQuery: window.location.search,
           fullHash: window.location.hash
         });
 
@@ -65,6 +71,22 @@ export default function ResetPassword() {
           setIsValidSession(true);
           setCheckingSession(false);
           return;
+        }
+
+        if (!accessToken && code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) {
+            throw error;
+          }
+        } else if (!accessToken && tokenHash && type === 'recovery') {
+          const { error } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: 'recovery',
+          });
+
+          if (error) {
+            throw error;
+          }
         }
 
         // Also check for existing session (for users who are already in password reset mode)

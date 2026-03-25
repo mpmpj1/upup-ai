@@ -1,408 +1,112 @@
-import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useState, useEffect, useMemo } from "react";
-import { Button } from "@/components/ui/button";
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Archive, LogIn, LogOut, MessageSquareText, Settings2 } from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/lib/auth';
 import {
-  TrendingUp,
-  Settings,
-  LogIn,
-  LogOut,
-  User as UserIcon,
-  FileText,
-  Home,
-  RefreshCw,
-  UserPlus,
-  Activity,
-  Menu,
-  Loader2
-} from "lucide-react";
-import { useAuth, hasRequiredApiKeys, hasAlpacaCredentials, isSessionValid } from "@/lib/auth";
-import { RoleBadge, RoleGate } from "@/components/RoleBasedAccess";
-import { useRBAC } from "@/hooks/useRBAC";
-import { supabase } from "@/lib/supabase";
-import {
-  ANALYSIS_STATUS,
-  convertLegacyAnalysisStatus,
-  isAnalysisActive,
-  isRebalanceActive
-} from "@/lib/statusTypes";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  BRAND_POSITIONING_SHORT,
+  BRAND_SHORT_NAME,
+  BRAND_TAGLINE,
+} from '@/lib/brand';
+import { cn } from '@/lib/utils';
+
+const navItems = [
+  {
+    href: '/workspace',
+    label: '工作台',
+    icon: MessageSquareText,
+  },
+  {
+    href: '/analysis-records',
+    label: '研究档案',
+    icon: Archive,
+  },
+  {
+    href: '/settings',
+    label: '模型设置',
+    icon: Settings2,
+  },
+];
 
 export default function Header() {
-  const navigate = useNavigate();
   const location = useLocation();
-  const { user, profile, isAuthenticated, logout, apiSettings } = useAuth();
-  const { getPrimaryRole, isLoading: isRoleLoading } = useRBAC();
-  const [runningAnalyses, setRunningAnalyses] = useState(0);
-  const [runningRebalances, setRunningRebalances] = useState(0);
-
-  const hasAiConfig = hasRequiredApiKeys(apiSettings);
-  const hasAlpacaConfig = hasAlpacaCredentials(apiSettings);
-  const systemStatus = useMemo(() => {
-    if (hasAiConfig && hasAlpacaConfig) {
-      return { dotClass: 'bg-buy', message: 'All Agents Ready' };
-    }
-    if (hasAiConfig && !hasAlpacaConfig) {
-      return { dotClass: 'bg-yellow-500', message: 'Alpaca Config Required' };
-    }
-    if (!hasAiConfig && hasAlpacaConfig) {
-      return { dotClass: 'bg-yellow-500', message: 'AI Config Required' };
-    }
-    return { dotClass: 'bg-red-500', message: 'Configurations Required' };
-  }, [hasAiConfig, hasAlpacaConfig]);
-  const primaryRole = getPrimaryRole();
-
-  // Check for running analyses and rebalances
-  useEffect(() => {
-    const checkRunningTasks = async () => {
-      if (!user) return;
-
-      // Skip database calls if session is invalid to prevent auth clearing
-      if (!isSessionValid()) {
-        console.log('[Header] Skipping task check - session invalid');
-        return;
-      }
-
-      try {
-        // Check running analyses - only fetch from last 24 hours
-        const twentyFourHoursAgo = new Date();
-        twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
-
-        const { data: analysisData } = await supabase
-          .from('analysis_history')
-          .select('id, analysis_status, is_canceled')
-          .eq('user_id', user.id)
-          .gte('created_at', twentyFourHoursAgo.toISOString());
-
-        if (analysisData) {
-          const runningCount = analysisData.filter(item => {
-            const currentStatus = typeof item.analysis_status === 'number'
-              ? convertLegacyAnalysisStatus(item.analysis_status)
-              : item.analysis_status;
-
-            if (item.is_canceled || currentStatus === ANALYSIS_STATUS.CANCELLED) {
-              return false;
-            }
-
-            return isAnalysisActive(currentStatus);
-          }).length;
-          setRunningAnalyses(runningCount);
-        }
-
-        // Check running rebalances
-        const { data: rebalanceData } = await supabase
-          .from('rebalance_requests')
-          .select('id, status')
-          .eq('user_id', user.id);
-
-        if (rebalanceData) {
-          const runningCount = rebalanceData.filter(item =>
-            isRebalanceActive(item.status)
-          ).length;
-          setRunningRebalances(runningCount);
-        }
-      } catch (error) {
-        console.error('Error checking running tasks:', error);
-      }
-    };
-
-    checkRunningTasks();
-    const interval = setInterval(checkRunningTasks, 100000); // Check every 10 seconds
-
-    return () => clearInterval(interval);
-  }, [user, location.pathname]);
+  const navigate = useNavigate();
+  const { isAuthenticated, user, logout } = useAuth();
 
   return (
-    <div className="sticky top-0 z-50">
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 sm:gap-4">
-              <a className="flex items-center gap-2 sm:gap-3" href="/">
-                <div className="p-2 rounded-lg">
-                  <img src="/goose.png" alt="TradingGoose Logo" className="h-8 w-8 sm:h-10 sm:w-10" />
-                </div>
-                <div>
-                  <h1 className="text-xl sm:text-2xl font-bold" style={{ color: '#FFCC00' }}>TradingGoose</h1>
-                  <p className="text-xs sm:text-sm text-muted-foreground">AI-Powered Portfolio Management</p>
-                </div>
-              </a>
-
-              {isAuthenticated && (
-                <div className="hidden md:flex items-center gap-1">
-                  <Link to="/dashboard">
-                    <Button variant="ghost" size="sm">
-                      <Home className="h-4 w-4 mr-2" />
-                      Dashboard
-                    </Button>
-                  </Link>
-                  <Link to="/analysis-records">
-                    <Button variant="ghost" size="sm">
-                      <FileText className="h-4 w-4 mr-2" />
-                      Analysis Records
-                    </Button>
-                  </Link>
-                  <Link to="/rebalance-records">
-                    <Button variant="ghost" size="sm">
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Rebalance Records
-                    </Button>
-                  </Link>
-                  <Link to="/trade-history">
-                    <Button variant="ghost" size="sm">
-                      <TrendingUp className="h-4 w-4 mr-2" />
-                      Trade History
-                    </Button>
-                  </Link>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2 sm:gap-3">
-              {isAuthenticated ? (
-                <>
-                  {/* Desktop Profile Dropdown */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild className="hidden md:flex">
-                      {isRoleLoading ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="max-w-[150px] sm:max-w-none"
-                          disabled
-                        >
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          <span className="truncate">Loading...</span>
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className={`max-w-[150px] sm:max-w-none transition-all duration-200 ${primaryRole?.color
-                            ? `border border-opacity-30 hover:bg-opacity-20`
-                            : 'border border-border hover:bg-accent'
-                            }`}
-                          style={primaryRole?.color ? {
-                            borderColor: `${primaryRole.color}4D`, // 30% opacity
-                            backgroundColor: `${primaryRole.color}1A`, // 10% opacity
-                            color: primaryRole.color
-                          } : {}}
-                          onMouseEnter={(e) => {
-                            if (primaryRole?.color) {
-                              e.currentTarget.style.backgroundColor = `${primaryRole.color}33`; // 20% opacity on hover
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (primaryRole?.color) {
-                              e.currentTarget.style.backgroundColor = `${primaryRole.color}1A`; // Back to 10% opacity
-                            }
-                          }}
-                        >
-                          {primaryRole?.icon_url ? (
-                            <img
-                              src={primaryRole.icon_url}
-                              alt={primaryRole.display_name}
-                              className="h-4 w-4 mr-2 object-contain"
-                            />
-                          ) : (
-                            <UserIcon className="h-4 w-4 mr-2" />
-                          )}
-                          <span className="truncate">{profile?.name || profile?.full_name || user?.email || 'Profile'}</span>
-                        </Button>
-                      )}
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
-                        <Link to="/profile" className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <UserIcon className="h-4 w-4 mr-2" />
-                            Profile
-                          </div>
-                          <RoleBadge className="ml-2" />
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link to="/settings" className="flex items-center">
-                          <Settings className="h-4 w-4 mr-2" />
-                          Settings
-                        </Link>
-                      </DropdownMenuItem>
-                      <RoleGate permissions={['admin.access']}>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuLabel className="text-xs text-muted-foreground">Admin</DropdownMenuLabel>
-                        <DropdownMenuItem asChild>
-                          <Link to="/admin/invitations" className="flex items-center">
-                            <UserPlus className="h-4 w-4 mr-2" />
-                            Invitations
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link to="/admin/users" className="flex items-center">
-                            <UserIcon className="h-4 w-4 mr-2" />
-                            User Management
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link to="/admin/roles" className="flex items-center">
-                            <Settings className="h-4 w-4 mr-2" />
-                            Role Management
-                          </Link>
-                        </DropdownMenuItem>
-                      </RoleGate>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onSelect={logout} className="text-red-600">
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Logout
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  {/* Mobile Hamburger Menu */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild className="md:hidden">
-                      <Button variant="outline" size="icon">
-                        <Menu className="h-5 w-5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuLabel className="text-xs text-muted-foreground">Navigation</DropdownMenuLabel>
-                      <DropdownMenuItem asChild>
-                        <Link to="/dashboard" className="flex items-center">
-                          <Home className="h-4 w-4 mr-2" />
-                          Dashboard
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link to="/analysis-records" className="flex items-center">
-                          <FileText className="h-4 w-4 mr-2" />
-                          Analysis Records
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link to="/rebalance-records" className="flex items-center">
-                          <RefreshCw className="h-4 w-4 mr-2" />
-                          Rebalance Records
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link to="/trade-history" className="flex items-center">
-                          <TrendingUp className="h-4 w-4 mr-2" />
-                          Trade History
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuLabel className="text-xs text-muted-foreground">Account</DropdownMenuLabel>
-                      <DropdownMenuItem asChild>
-                        <Link to="/profile" className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <UserIcon className="h-4 w-4 mr-2" />
-                            Profile
-                          </div>
-                          <RoleBadge className="ml-2" />
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link to="/settings" className="flex items-center">
-                          <Settings className="h-4 w-4 mr-2" />
-                          Settings
-                        </Link>
-                      </DropdownMenuItem>
-                      <RoleGate permissions={['admin.access']}>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuLabel className="text-xs text-muted-foreground">Admin</DropdownMenuLabel>
-                        <DropdownMenuItem asChild>
-                          <Link to="/admin/invitations" className="flex items-center">
-                            <UserPlus className="h-4 w-4 mr-2" />
-                            Invitations
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link to="/admin/users" className="flex items-center">
-                            <UserIcon className="h-4 w-4 mr-2" />
-                            User Management
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link to="/admin/roles" className="flex items-center">
-                            <Settings className="h-4 w-4 mr-2" />
-                            Role Management
-                          </Link>
-                        </DropdownMenuItem>
-                      </RoleGate>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onSelect={logout} className="text-red-600">
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Logout
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  <div className="text-right hidden sm:block">
-                    <p className="text-sm font-medium text-foreground">System Status</p>
-                    <div className="flex items-center gap-2">
-                      <div className={`h-2 w-2 rounded-full ${systemStatus.dotClass} animate-pulse`}></div>
-                      <span className="text-xs text-muted-foreground">
-                        {systemStatus.message}
-                      </span>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <Button variant="outline" size="sm" onClick={() => navigate('/login')}>
-                    <LogIn className="h-4 w-4 mr-1 sm:mr-2" />
-                    <span className="hidden sm:inline">Login</span>
-                  </Button>
-                  <Button variant="default" size="sm" onClick={() => navigate('/register')}>
-                    <UserPlus className="h-4 w-4 mr-1 sm:mr-2" />
-                    <span className="hidden sm:inline">Sign Up</span>
-                  </Button>
-
-                  <div className="text-right hidden sm:block">
-                    <p className="text-sm font-medium text-foreground">System Status</p>
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-gray-500"></div>
-                      <span className="text-xs text-muted-foreground">Login Required</span>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
+    <header className="sticky top-0 z-50 border-b border-black/5 bg-white/85 backdrop-blur-xl">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
+        <Link to={isAuthenticated ? '/workspace' : '/'} className="flex min-w-0 items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-sm font-extrabold tracking-[0.24em] text-stone-100 shadow-[0_14px_32px_-18px_rgba(15,23,42,0.7)]">
+            UU
           </div>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="truncate text-lg font-semibold tracking-tight text-slate-950">
+                {BRAND_SHORT_NAME}
+              </span>
+              <Badge variant="outline" className="hidden border-slate-300/80 text-[11px] text-slate-600 sm:inline-flex">
+                金融专用
+              </Badge>
+            </div>
+            <p className="truncate text-xs text-slate-500">{BRAND_TAGLINE}</p>
+          </div>
+        </Link>
+
+        <div className="hidden items-center gap-2 xl:flex">
+          {isAuthenticated &&
+            navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.href;
+              return (
+                <Link key={item.href} to={item.href}>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      'gap-2 rounded-full px-4 text-slate-600 hover:bg-stone-100 hover:text-slate-950',
+                      isActive && 'bg-slate-950 text-stone-100 hover:bg-slate-950 hover:text-stone-100'
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </Button>
+                </Link>
+              );
+            })}
         </div>
-      </header>
 
-      {/* Running tasks banner */}
-      {isAuthenticated && (runningAnalyses > 0 || runningRebalances > 0) && (
-        <div className="bg-primary/10 border-b border-primary/20 backdrop-blur-sm">
-          <div className="container mx-auto px-6 py-2">
-            <div className="flex items-center justify-center gap-4 text-sm">
-              {runningRebalances > 0 && (
-                <div className="flex items-center gap-2">
-                  <RefreshCw className="h-3 w-3 animate-spin text-primary" />
-                  <span className="font-medium">
-                    {runningRebalances === 1 ? 'Portfolio Rebalance is Running' : `${runningRebalances} Portfolio Rebalances Running`}
-                  </span>
-                </div>
-              )}
-              {runningAnalyses > 0 && (
-                <div className="flex items-center gap-2">
-                  <Activity className="h-3 w-3 animate-pulse text-primary" />
-                  <span className="font-medium">
-                    {runningAnalyses} Analysis{runningAnalyses > 1 ? 'es' : ''} Running
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
+        <div className="flex items-center gap-2">
+          {isAuthenticated ? (
+            <>
+              <div className="hidden text-right sm:block">
+                <p className="text-sm font-medium text-slate-900">{user?.email || BRAND_SHORT_NAME}</p>
+                <p className="text-xs text-slate-500">{BRAND_POSITIONING_SHORT}</p>
+              </div>
+              <Button variant="outline" className="border-slate-200 bg-white" onClick={logout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                退出
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" className="text-slate-600 hover:text-slate-950" onClick={() => navigate('/login')}>
+                <LogIn className="mr-2 h-4 w-4" />
+                登录
+              </Button>
+              <Button variant="premium" onClick={() => navigate('/login')}>
+                进入 {BRAND_SHORT_NAME}
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {isAuthenticated && (
+        <div className="border-t border-black/5 bg-stone-50/90 px-4 py-2 text-center text-xs text-slate-500 sm:px-6 xl:hidden">
+          工作台 / 研究档案 / 模型设置
         </div>
       )}
-    </div>
+    </header>
   );
 }

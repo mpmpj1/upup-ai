@@ -8,46 +8,45 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Premium Dark Theme with Subtle Gold Accents */
-    --background: 220 15% 5%;
-    --foreground: 210 10% 95%;
+    --background: 38 45% 98%;
+    --foreground: 222 47% 11%;
 
-    --card: 220 15% 8%;
-    --card-foreground: 210 10% 95%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
 
-    --popover: 220 15% 10%;
-    --popover-foreground: 210 10% 95%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 45 90% 51%;
-    --primary-foreground: 220 15% 5%;
-    --primary-glow: 45 85% 58%;
+    --primary: 42 96% 48%;
+    --primary-foreground: 222 47% 11%;
+    --primary-glow: 45 100% 58%;
 
-    --secondary: 220 15% 13%;
-    --secondary-foreground: 210 10% 95%;
+    --secondary: 210 33% 96%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 215 15% 17%;
-    --muted-foreground: 215 10% 65%;
+    --muted: 210 33% 96%;
+    --muted-foreground: 215 16% 35%;
 
-    --accent: 45 75% 48%;
-    --accent-foreground: 220 15% 5%;
+    --accent: 42 96% 92%;
+    --accent-foreground: 222 47% 11%;
 
     --destructive: 0 72% 51%;
-    --destructive-foreground: 210 10% 95%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 215 15% 20%;
-    --input: 220 15% 11%;
-    --ring: 45 90% 51%;
+    --border: 214 32% 91%;
+    --input: 0 0% 100%;
+    --ring: 42 96% 48%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 220 15% 7%;
-    --sidebar-foreground: 210 10% 95%;
-    --sidebar-primary: 45 90% 51%;
-    --sidebar-primary-foreground: 220 15% 5%;
-    --sidebar-accent: 220 15% 13%;
-    --sidebar-accent-foreground: 210 10% 95%;
-    --sidebar-border: 215 15% 20%;
-    --sidebar-ring: 45 90% 51%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 42 96% 48%;
+    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-accent: 210 33% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 42 96% 48%;
 
     /* Trading specific colors */
     --buy: 142 70% 45%;
@@ -62,7 +61,7 @@ All colors MUST be HSL.
 
     /* Shadows */
     --shadow-glow: 0 0 20px hsl(var(--primary) / 0.15);
-    --shadow-elevated: 0 10px 30px -5px hsl(220 25% 5% / 0.8);
+    --shadow-elevated: 0 10px 30px -12px hsl(222 47% 11% / 0.18);
 
     /* Agent status colors */
     --agent-analyst: 210 70% 50%;
@@ -75,7 +74,6 @@ All colors MUST be HSL.
   }
 
   .dark {
-    /* Dark mode with subtle gold accents */
     --background: 220 15% 5%;
     --foreground: 210 10% 95%;
     --card: 220 15% 8%;

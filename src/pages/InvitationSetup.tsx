@@ -38,12 +38,14 @@ export default function InvitationSetup() {
       const refreshToken = hashParams.get('refresh_token') ?? queryParams.get('refresh_token');
       const type = queryParams.get('type') ?? hashParams.get('type');
       const code = queryParams.get('code');
+      const tokenHash = queryParams.get('token_hash') ?? hashParams.get('token_hash');
       
       console.log('Token details:', {
         type,
         hasAccessToken: !!accessToken,
         hasRefreshToken: !!refreshToken,
         hasCode: !!code,
+        hasTokenHash: !!tokenHash,
         tokenLength: accessToken?.length
       });
 
@@ -75,6 +77,22 @@ export default function InvitationSetup() {
 
           console.log('Session established successfully through auth code exchange');
           establishedSession = exchangeData.session;
+        } else if (tokenHash && !accessToken && !refreshToken) {
+          const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: 'invite',
+          });
+
+          if (verifyError) {
+            throw new Error(`Failed to authenticate: ${verifyError.message}`);
+          }
+
+          if (!verifyData.session || !verifyData.session.user) {
+            throw new Error('Session was not established properly');
+          }
+
+          console.log('Session established successfully through token hash verification');
+          establishedSession = verifyData.session;
         } else {
           if (!accessToken || !refreshToken) {
             throw new Error('Missing authentication tokens. Please request a new invitation.');

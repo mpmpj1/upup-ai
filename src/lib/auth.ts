@@ -7,6 +7,45 @@ import { getCachedSession, clearSessionCache, updateCachedSession } from './cach
 import type { User, Session } from '@supabase/supabase-js';
 import { buildAppUrl, isCurrentAppRoute } from './appUrl';
 
+const normalizeAuthErrorMessage = (rawMessage: string | null | undefined, fallback: string) => {
+  const message = rawMessage?.trim();
+  if (!message) {
+    return fallback;
+  }
+
+  const lower = message.toLowerCase();
+
+  if (
+    lower.includes('failed to fetch') ||
+    lower.includes('networkerror') ||
+    lower.includes('load failed')
+  ) {
+    return '网络连接暂时不稳定，请稍后重试。';
+  }
+
+  if (lower.includes('email not confirmed')) {
+    return '邮箱还没有确认，请先点击确认邮件中的链接。';
+  }
+
+  if (lower.includes('invalid login credentials')) {
+    return '邮箱或密码不正确，请重新输入。';
+  }
+
+  if (lower.includes('user already registered')) {
+    return '这个邮箱已经注册过了，可以直接去登录。';
+  }
+
+  if (lower.includes('rate limit') || lower.includes('over_email_send_rate_limit')) {
+    return '操作太频繁了，请稍后再试。';
+  }
+
+  if (lower.includes('signup is disabled')) {
+    return '当前暂未开放公开注册。';
+  }
+
+  return message;
+};
+
 interface AuthState {
   // Core state
   session: Session | null;
@@ -393,8 +432,9 @@ export const useAuth = create<AuthState>()(
           });
 
           if (error) {
-            set({ isLoading: false, error: error.message });
-            return { success: false, error: error.message };
+            const message = normalizeAuthErrorMessage(error.message, '登录失败');
+            set({ isLoading: false, error: message });
+            return { success: false, error: message };
           }
 
           if (data.session && data.user) {
@@ -496,7 +536,10 @@ export const useAuth = create<AuthState>()(
           return { success: false, error: 'Login failed' };
 
         } catch (error) {
-          const message = error instanceof Error ? error.message : 'Login failed';
+          const message = normalizeAuthErrorMessage(
+            error instanceof Error ? error.message : null,
+            '登录失败，请稍后重试。',
+          );
           set({ isLoading: false, error: message });
           return { success: false, error: message };
         }
@@ -548,8 +591,9 @@ export const useAuth = create<AuthState>()(
           });
 
           if (error) {
-            set({ isLoading: false, error: error.message });
-            return { success: false, error: error.message };
+            const message = normalizeAuthErrorMessage(error.message, '注册失败');
+            set({ isLoading: false, error: message });
+            return { success: false, error: message };
           }
 
           if (data.user) {
@@ -577,7 +621,10 @@ export const useAuth = create<AuthState>()(
           return { success: false, error: 'Registration failed' };
 
         } catch (error) {
-          const message = error instanceof Error ? error.message : 'Registration failed';
+          const message = normalizeAuthErrorMessage(
+            error instanceof Error ? error.message : null,
+            '注册失败，请稍后重试。',
+          );
           set({ isLoading: false, error: message });
           return { success: false, error: message };
         }
@@ -591,14 +638,20 @@ export const useAuth = create<AuthState>()(
           });
 
           if (error) {
-            return { success: false, error: error.message };
+            return {
+              success: false,
+              error: normalizeAuthErrorMessage(error.message, '发送重置邮件失败'),
+            };
           }
 
           return { success: true };
         } catch (error) {
           return {
             success: false,
-            error: error instanceof Error ? error.message : 'Failed to send reset email'
+            error: normalizeAuthErrorMessage(
+              error instanceof Error ? error.message : null,
+              '发送重置邮件失败，请稍后重试。',
+            )
           };
         }
       },

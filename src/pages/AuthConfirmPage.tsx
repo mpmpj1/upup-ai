@@ -61,24 +61,64 @@ const toOtpType = (value: string | null): SupportedOtpType | null => {
   return null;
 };
 
+const readFirstParam = (...values: Array<string | null | undefined>) =>
+  values.find((value) => typeof value === 'string' && value.trim().length > 0) ?? null;
+
+const parseNestedCallbackParams = (value: string | null) => {
+  if (!value) {
+    return {
+      query: null as URLSearchParams | null,
+      hash: null as URLSearchParams | null,
+    };
+  }
+
+  try {
+    const nestedUrl = new URL(value);
+    return {
+      query: nestedUrl.searchParams,
+      hash: new URLSearchParams(nestedUrl.hash.replace(/^#/, '')),
+    };
+  } catch {
+    return {
+      query: null,
+      hash: null,
+    };
+  }
+};
+
+const isPkceSessionRecoveryError = (rawMessage?: string | null) => {
+  const lower = rawMessage?.toLowerCase() ?? '';
+  return (
+    lower.includes('code verifier') ||
+    lower.includes('auth code') ||
+    lower.includes('flow state') ||
+    lower.includes('code challenge') ||
+    lower.includes('both auth code and code verifier should be non-empty')
+  );
+};
+
 const getFriendlyError = (rawMessage?: string | null) => {
   const message = rawMessage?.trim();
   if (!message) {
-    return '这个确认链接已经失效，或者系统没有拿到完整的认证参数。';
+    return '这次确认没有拿到完整凭证，请重新点击最新一封确认邮件中的原始链接。';
   }
 
   const lower = message.toLowerCase();
 
   if (lower.includes('expired')) {
-    return '这个确认链接已经过期，请重新注册或让系统重新发送确认邮件。';
+    return '这次确认链接已经过期，请重新注册或让系统重新发送确认邮件。';
   }
 
   if (lower.includes('otp') || lower.includes('token')) {
-    return '确认链接里的认证信息无效，通常是链接过期、被重复使用，或复制时不完整。';
+    return '确认链接里的认证信息已经失效，通常是链接过期、被重复使用，或复制时不完整。';
   }
 
-  if (lower.includes('code verifier') || lower.includes('auth code')) {
-    return '系统没有拿到完整的确认凭证，请重新点击邮件中的原始链接。';
+  if (isPkceSessionRecoveryError(message)) {
+    return '邮箱大概率已经确认成功，只是当前浏览器没有拿到自动登录凭证。你现在可以直接返回登录页登录。';
+  }
+
+  if (lower.includes('failed to fetch') || lower.includes('network')) {
+    return '网络连接暂时不稳定，请稍后重试，或重新点击邮件中的链接。';
   }
 
   return message;
@@ -97,20 +137,23 @@ export default function AuthConfirmPage() {
     let isCancelled = false;
 
     const finalizeSuccess = async (email?: string, autoSignedIn = false) => {
-      if (!isCancelled) {
-        sessionStorage.removeItem(PENDING_REGISTRATION_EMAIL_KEY);
-        window.history.replaceState({}, document.title, getAppPath('/auth/confirm'));
-        await useAuth.getState().initialize();
-        setViewState({
-          status: 'success',
-          title: '恭喜你，注册成功',
-          description: autoSignedIn
-            ? '邮箱已经确认完成，你现在可以直接进入工作台体验。'
-            : '邮箱已经确认完成，现在可以返回登录，或者继续进入工作台。',
-          email,
-          autoSignedIn,
-        });
+      if (isCancelled) {
+        return;
       }
+
+      sessionStorage.removeItem(PENDING_REGISTRATION_EMAIL_KEY);
+      window.history.replaceState({}, document.title, getAppPath('/auth/confirm'));
+      await useAuth.getState().initialize();
+
+      setViewState({
+        status: 'success',
+        title: '恭喜你，注册成功',
+        description: autoSignedIn
+          ? '邮箱已经确认完成，你现在可以直接进入工作台体验。'
+          : '邮箱已经确认完成。为了保证登录状态稳定，现在可以直接返回登录页登录。',
+        email,
+        autoSignedIn,
+      });
     };
 
     const finalizeError = (description: string, detail?: string, email?: string) => {
@@ -131,23 +174,63 @@ export default function AuthConfirmPage() {
       const currentUrl = new URL(window.location.href);
       const queryParams = currentUrl.searchParams;
       const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const nestedCallbackUrl = readFirstParam(
+        queryParams.get('confirmation_url'),
+        queryParams.get('confirmationUrl'),
+      );
+      const nestedParams = parseNestedCallbackParams(nestedCallbackUrl);
 
-      const type = queryParams.get('type') ?? hashParams.get('type');
-      const code = queryParams.get('code');
-      const tokenHash = queryParams.get('token_hash') ?? hashParams.get('token_hash');
-      const accessToken = hashParams.get('access_token');
-      const refreshToken = hashParams.get('refresh_token');
-      const errorDescription =
-        queryParams.get('error_description') ?? hashParams.get('error_description');
+      const type = readFirstParam(
+        queryParams.get('type'),
+        hashParams.get('type'),
+        nestedParams.query?.get('type'),
+        nestedParams.hash?.get('type'),
+      );
+      const code = readFirstParam(
+        queryParams.get('code'),
+        hashParams.get('code'),
+        nestedParams.query?.get('code'),
+        nestedParams.hash?.get('code'),
+      );
+      const tokenHash = readFirstParam(
+        queryParams.get('token_hash'),
+        hashParams.get('token_hash'),
+        nestedParams.query?.get('token_hash'),
+        nestedParams.hash?.get('token_hash'),
+      );
+      const accessToken = readFirstParam(
+        hashParams.get('access_token'),
+        queryParams.get('access_token'),
+        nestedParams.hash?.get('access_token'),
+        nestedParams.query?.get('access_token'),
+      );
+      const refreshToken = readFirstParam(
+        hashParams.get('refresh_token'),
+        queryParams.get('refresh_token'),
+        nestedParams.hash?.get('refresh_token'),
+        nestedParams.query?.get('refresh_token'),
+      );
+      const errorDescription = readFirstParam(
+        queryParams.get('error_description'),
+        hashParams.get('error_description'),
+        nestedParams.query?.get('error_description'),
+        nestedParams.hash?.get('error_description'),
+      );
       const pendingEmail = sessionStorage.getItem(PENDING_REGISTRATION_EMAIL_KEY) ?? undefined;
+      const emailFromCallback = readFirstParam(
+        queryParams.get('email'),
+        hashParams.get('email'),
+        nestedParams.query?.get('email'),
+        nestedParams.hash?.get('email'),
+      );
 
       if (type === 'recovery') {
-        navigate(`/reset-password${window.location.hash}`, { replace: true });
+        navigate(`/reset-password${window.location.search}${window.location.hash}`, { replace: true });
         return;
       }
 
       if (type === 'invite') {
-        navigate(`/invitation-setup${window.location.hash}`, { replace: true });
+        navigate(`/invitation-setup${window.location.search}${window.location.hash}`, { replace: true });
         return;
       }
 
@@ -161,7 +244,8 @@ export default function AuthConfirmPage() {
         Boolean(tokenHash) ||
         Boolean(accessToken) ||
         Boolean(refreshToken) ||
-        Boolean(errorDescription);
+        Boolean(errorDescription) ||
+        Boolean(nestedCallbackUrl);
 
       try {
         if (!session && code) {
@@ -192,7 +276,7 @@ export default function AuthConfirmPage() {
               throw error;
             }
             session = data.session ?? null;
-            user = data.session?.user ?? user;
+            user = data.user ?? data.session?.user ?? user;
           }
         }
       } catch (error) {
@@ -202,12 +286,14 @@ export default function AuthConfirmPage() {
       session = (await supabase.auth.getSession()).data.session ?? session;
       user = (await supabase.auth.getUser()).data.user ?? session?.user ?? user;
 
-      const confirmedEmail = user?.email ?? pendingEmail;
-      const isConfirmed =
-        Boolean(session?.user) ||
-        Boolean(user?.email_confirmed_at);
+      const confirmedEmail = user?.email ?? emailFromCallback ?? pendingEmail;
+      const isConfirmed = Boolean(session?.user) || Boolean(user?.email_confirmed_at);
+      const likelyConfirmedWithoutSession =
+        Boolean(code) &&
+        (type === 'signup' || type === 'email' || type === 'magiclink') &&
+        isPkceSessionRecoveryError(callbackError);
 
-      if (isConfirmed) {
+      if (isConfirmed || likelyConfirmedWithoutSession) {
         await finalizeSuccess(confirmedEmail, Boolean(session));
         return;
       }
@@ -259,10 +345,22 @@ export default function AuthConfirmPage() {
           </CardHeader>
 
           <CardContent className="space-y-4">
-            {viewState.status === 'success' && viewState.email ? (
-              <Alert className="border-emerald-200 bg-emerald-50 text-emerald-900">
-                <MailCheck className="h-4 w-4 text-emerald-600" />
-                <AlertDescription>已确认邮箱：{viewState.email}</AlertDescription>
+            {viewState.email ? (
+              <Alert
+                className={
+                  viewState.status === 'success'
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                    : 'border-amber-200 bg-amber-50 text-amber-900'
+                }
+              >
+                <MailCheck
+                  className={
+                    viewState.status === 'success'
+                      ? 'h-4 w-4 text-emerald-600'
+                      : 'h-4 w-4 text-amber-600'
+                  }
+                />
+                <AlertDescription>邮箱：{viewState.email}</AlertDescription>
               </Alert>
             ) : null}
 

@@ -3,11 +3,15 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 
+const configuredBasePath = process.env.VITE_BASE_PATH?.trim() || "/";
+const normalizedBasePath =
+  configuredBasePath === "/"
+    ? "/"
+    : `/${configuredBasePath.replace(/^\/+|\/+$/g, "")}/`;
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  // Configure base path for GitHub Pages deployment
-  // This will be '/' for TradingGoose.github.io
-  base: '/',
+  base: normalizedBasePath,
   server: {
     host: "::",
     port: 8080,

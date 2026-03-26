@@ -35,6 +35,7 @@ jobs:
 
       - name: Build with Vite
         env:
+          VITE_BASE_PATH: /upup-ai/
           # Public environment variables (safe to expose)
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           # Use the new publishable key format (recommended by Supabase)

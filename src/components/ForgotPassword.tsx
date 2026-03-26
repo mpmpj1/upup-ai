@@ -1,55 +1,48 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Mail, ArrowLeft, CheckCircle, AlertCircle } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-import { buildAppUrl } from "@/lib/appUrl";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { AlertCircle, ArrowRight, CheckCircle, Loader2, Mail } from 'lucide-react';
+
+import AuthLayout from '@/components/auth/AuthLayout';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { buildAppUrl } from '@/lib/appUrl';
+import { supabase } from '@/lib/supabase';
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setError('');
     setIsLoading(true);
 
     try {
-      // Build the correct redirect URL
       const redirectUrl = buildAppUrl('/reset-password');
-
-      console.log('Sending password reset email to:', email);
-      console.log('Redirect URL:', redirectUrl);
-
       const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
       });
 
       if (error) {
-        console.error('Supabase error:', error);
-        // Provide more specific error messages
         if (error.message?.includes('429') || error.message?.includes('rate limit')) {
-          setError('Too many password reset attempts. Please wait 60 minutes before trying again.');
+          setError('重置密码请求过于频繁，请等待一段时间后再试。');
         } else if (error.message?.includes('not found')) {
-          // Don't reveal if email exists for security
           setSuccess(true);
         } else {
-          setError(error.message || 'Failed to send reset email. Please try again later.');
+          setError(error.message || '发送重置邮件失败，请稍后重试。');
         }
       } else {
         console.log('Password reset email sent successfully:', data);
         setSuccess(true);
       }
     } catch (err) {
-      setError("An unexpected error occurred. Please try again.");
-      console.error("Password reset error:", err);
+      setError('发送重置邮件时出现异常，请稍后重试。');
+      console.error('Password reset error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -57,101 +50,86 @@ export default function ForgotPassword() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle className="h-6 w-6 text-green-600" />
-            </div>
-            <CardTitle>Check your email</CardTitle>
-            <CardDescription className="mt-2">
-              We've sent a password reset link to {email}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Alert>
-              <Mail className="h-4 w-4" />
-              <AlertDescription>
-                Please check your email and click the reset link to set a new password.
-                The link will expire in 1 hour.
-              </AlertDescription>
-            </Alert>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => navigate("/login")}
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Login
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <AuthLayout
+        eyebrow="Password recovery"
+        title="检查你的邮箱"
+        description="如果该邮箱存在账号，我们已经发送了重置密码链接。"
+        compact
+        footer={
+          <Button variant="outline" className="w-full" onClick={() => navigate('/login')}>
+            返回登录页
+          </Button>
+        }
+      >
+        <div className="space-y-5">
+          <div className="inline-flex h-14 w-14 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 text-emerald-600">
+            <CheckCircle className="h-7 w-7" />
+          </div>
+          <Alert className="rounded-[22px] border-emerald-200 bg-emerald-50 text-emerald-700">
+            <Mail className="h-4 w-4" />
+            <AlertDescription>
+              请检查 {email} 对应的邮箱收件箱和垃圾邮件箱。链接通常会在 1 小时内有效。
+            </AlertDescription>
+          </Alert>
+        </div>
+      </AuthLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Forgot Password</CardTitle>
-          <CardDescription>
-            Enter your email address and we'll send you a link to reset your password
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={isLoading}
-              />
-            </div>
+    <AuthLayout
+      eyebrow="Password recovery"
+      title="找回密码"
+      description="输入你的邮箱，我们会发送一封重置密码邮件。"
+      footer={
+        <Button variant="ghost" className="w-full" onClick={() => navigate('/login')}>
+          返回登录页
+        </Button>
+      }
+    >
+      <div className="space-y-2">
+        <h2 className="text-3xl font-semibold tracking-tight text-slate-950">重置访问凭证</h2>
+        <p className="text-sm leading-7 text-slate-600">
+          完成重置后，你可以重新回到研究工作台、档案库和 Thesis Card 资产页继续工作。
+        </p>
+      </div>
 
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading || !email}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Sending reset link...
-                </>
-              ) : (
-                <>
-                  <Mail className="mr-2 h-4 w-4" />
-                  Send Reset Link
-                </>
-              )}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full"
-              onClick={() => navigate("/login")}
-              disabled={isLoading}
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Login
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
-    </div>
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="space-y-2">
+          <Label htmlFor="email">邮箱</Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            disabled={isLoading}
+          />
+        </div>
+
+        {error ? (
+          <Alert variant="destructive" className="rounded-[22px] border-red-200 bg-red-50 text-red-700">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        <Button type="submit" className="w-full justify-center" disabled={isLoading || !email}>
+          {isLoading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              发送中
+            </>
+          ) : (
+            <>
+              <Mail className="h-4 w-4" />
+              发送重置链接
+              <ArrowRight className="h-4 w-4" />
+            </>
+          )}
+        </Button>
+      </form>
+    </AuthLayout>
   );
 }

@@ -1,58 +1,42 @@
-import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
+import * as React from 'react';
+import { cva, type VariantProps } from 'class-variance-authority';
 
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/utils';
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  'inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring/40 focus:ring-offset-2',
   {
     variants: {
       variant: {
-        default:
-          "border-primary/20 bg-primary/10 text-primary hover:bg-primary/20",
-        secondary:
-          "border-secondary/20 bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        destructive:
-          "border-transparent bg-red-600 text-white hover:bg-red-700",
-        outline: "text-foreground border-border hover:bg-accent hover:text-accent-foreground",
-        success:
-          "border-transparent bg-green-600 text-white hover:bg-green-700",
-        warning:
-          "border-transparent bg-yellow-600 text-white hover:bg-yellow-700",
+        default: 'border-slate-900/8 bg-slate-900 text-white',
+        secondary: 'border-border/70 bg-secondary/90 text-secondary-foreground',
+        destructive: 'border-red-200 bg-red-50 text-red-700',
+        outline: 'border-border/80 bg-white/80 text-foreground',
+        success: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+        warning: 'border-amber-200 bg-amber-50 text-amber-700',
         premium:
-          "border-primary/30 bg-gradient-to-r from-primary/20 to-accent/20 text-primary hover:from-primary/30 hover:to-accent/30",
-        // Trading action badges with unified styling
-        buy:
-          "border border-green-500/30 bg-green-500/10 text-green-600 font-semibold hover:bg-green-500/20",
-        sell:
-          "border border-red-500/30 bg-red-500/10 text-red-600 font-semibold hover:bg-red-500/20",
-        hold:
-          "border border-gray-500/30 bg-gray-500/10 text-gray-600 font-semibold hover:bg-gray-500/20",
-        // Workflow status badges
-        completed:
-          "border border-green-500/30 bg-green-500/10 text-green-600 font-semibold hover:bg-green-500/20",
-        running:
-          "border border-yellow-500/30 bg-yellow-500/10 text-yellow-600 font-semibold hover:bg-yellow-500/20",
-        error:
-          "border border-red-500/30 bg-red-500/10 text-red-600 font-semibold hover:bg-red-500/20",
-        pending:
-          "border border-gray-500/30 bg-gray-500/10 text-gray-600 font-semibold hover:bg-gray-500/20",
+          'border-amber-200 bg-[linear-gradient(135deg,rgba(255,249,235,0.98),rgba(255,255,255,0.98))] text-slate-800',
+        buy: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+        sell: 'border-red-200 bg-red-50 text-red-700',
+        hold: 'border-slate-200 bg-slate-100 text-slate-700',
+        completed: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+        running: 'border-amber-200 bg-amber-50 text-amber-700',
+        error: 'border-red-200 bg-red-50 text-red-700',
+        pending: 'border-slate-200 bg-slate-100 text-slate-700',
       },
     },
     defaultVariants: {
-      variant: "default",
+      variant: 'default',
     },
-  }
-)
+  },
+);
 
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof badgeVariants> {}
 
 function Badge({ className, variant, ...props }: BadgeProps) {
-  return (
-    <div className={cn(badgeVariants({ variant }), className)} {...props} />
-  )
+  return <div className={cn(badgeVariants({ variant }), className)} {...props} />;
 }
 
-export { Badge, badgeVariants }
+export { Badge, badgeVariants };

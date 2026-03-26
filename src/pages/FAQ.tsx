@@ -1,289 +1,287 @@
-import { useState, useEffect } from "react";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import { useState } from "react";
+import {
+  BookOpen,
+  ChevronDown,
+  ChevronUp,
+  Database,
+  FileStack,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
+
+import PublicContentLayout from "@/components/PublicContentLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import MarkdownRenderer from "@/components/MarkdownRenderer";
-import {
-  ChevronDown,
-  ChevronUp,
-  HelpCircle,
-  Bot,
-  Shield,
-  DollarSign,
-  Settings,
-  Users,
-  Zap
-} from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface FAQItem {
   question: string;
-  answer: string;
-  icon?: React.ReactNode;
+  answer: string[];
 }
 
 interface FAQSection {
   title: string;
-  icon: React.ReactNode;
+  icon: typeof Sparkles;
   items: FAQItem[];
 }
 
-const FAQ = () => {
-  const [collapsedItems, setCollapsedItems] = useState<Set<string>>(() => {
-    // Create a set with all item keys to start collapsed
-    const allItems = new Set<string>();
-    let sectionCount = 5; // Number of sections (removed Legal & Compliance)
-    let itemsPerSection = [3, 8, 4, 3, 4]; // Items in each section
-    for (let i = 0; i < sectionCount; i++) {
-      for (let j = 0; j < itemsPerSection[i]; j++) {
-        allItems.add(`${i}-${j}`);
-      }
-    }
-    return allItems;
-  });
+const faqSections: FAQSection[] = [
+  {
+    title: "产品定位",
+    icon: Sparkles,
+    items: [
+      {
+        question: "涨涨AI 和普通聊天助手有什么区别？",
+        answer: [
+          "涨涨AI 不是通用聊天壳，而是 thesis-first 的 AI 金融研究工作台。",
+          "回答会优先给出明确判断，再展开 direct answer、core judgment、bull case、bear case、关键变量、最强反方、mind-change conditions 与 watch list。",
+          "高质量研究不会停留在聊天记录里，而会沉淀为 Thesis Card、简报和可继续追踪的归档资产。",
+        ],
+      },
+      {
+        question: "它主要回答哪些问题？",
+        answer: [
+          "产品聚焦股票、基金、财报、公司、行业、宏观与市场研究。",
+          "你可以发起 thesis-first 初始研究、围绕既有结论连续追问，或者基于新事件做增量更新。",
+          "我们不把体验设计成实时交易终端，也不鼓励把研究结论误读为个性化交易指令。",
+        ],
+      },
+      {
+        question: "research-only guardrail 是什么？",
+        answer: [
+          "当用户直接问“买不买、仓位多少、止损止盈”时，前端和研究链路会把问题拉回研究型分析。",
+          "系统会优先讨论 thesis、风险、反方观点与观测变量，而不是输出个性化买卖建议。",
+          "这既是产品边界，也是合规护栏的一部分。",
+        ],
+      },
+    ],
+  },
+  {
+    title: "研究流程",
+    icon: BookOpen,
+    items: [
+      {
+        question: "什么叫 thesis-first？",
+        answer: [
+          "thesis-first 的意思是先给判断，再展开论证。",
+          "输出不会把最关键结论藏在长段落后面，而是优先暴露 core judgment、direct answer 和 one-line takeaway。",
+          "这样你可以先判断是否继续深挖，再阅读支持理由、反方观点和监控变量。",
+        ],
+      },
+      {
+        question: "follow-up continuity 如何工作？",
+        answer: [
+          "连续追问默认承接同一 thesis，而不是把每轮回答都当成全新话题。",
+          "这意味着系统会尽量复用前一轮的核心判断、关键变量与反方逻辑，只补充新增信息和新的推演。",
+          "产品目标是让研究过程像真正的投研协作，而不是一次次重新生成独立文章。",
+        ],
+      },
+      {
+        question: "event update 和重新提问有什么不同？",
+        answer: [
+          "event update 更强调“旧判断 -> 新信息 -> thesis update”的连续链路。",
+          "它不是把整篇研究从头写一遍，而是围绕新事件说明哪些地方被强化、哪些地方被削弱，以及哪些 mind-change conditions 被触发。",
+          "如果你只想看增量变化，优先使用 event update 会更合适。",
+        ],
+      },
+      {
+        question: "Structured Research View 里最值得先看什么？",
+        answer: [
+          "建议先看 direct answer、core judgment 和 one-line takeaway，它们代表这一轮最浓缩的结论。",
+          "接着看 bull case / bear case、key variables 与 strongest counterargument，快速判断 thesis 的支撑与脆弱点。",
+          "最后再看 watch list 和 citations，用于后续持续跟踪与来源校验。",
+        ],
+      },
+    ],
+  },
+  {
+    title: "归档与资产",
+    icon: FileStack,
+    items: [
+      {
+        question: "Thesis Card 是什么，为什么重要？",
+        answer: [
+          "Thesis Card 是高价值研究资产，不是普通 badge。",
+          "它会把某次研究的核心判断、关键信号与跟踪要点浓缩成可复用单元，方便在工作台和 Archive 中继续追踪。",
+          "如果你经常围绕同一标的或主题迭代研究，Thesis Card 会比单纯翻聊天记录高效很多。",
+        ],
+      },
+      {
+        question: "Archive 里会保存什么？",
+        answer: [
+          "Archive 会统一沉淀历史对话、briefings 和 Thesis Card。",
+          "它不是简单的时间线，而是一个可以检索、切换和复用研究资产的知识库界面。",
+          "你可以把它理解成研究工作流的长期记忆层。",
+        ],
+      },
+      {
+        question: "briefings 和对话、Thesis Card 的关系是什么？",
+        answer: [
+          "briefings 与研究对话共用同一套 thesis-first 产品逻辑。",
+          "它适合把某个判断压缩成晨报、事件快报或一页纸，而不是脱离主工作台另起一套风格或数据流。",
+          "因此 briefings、历史对话和 Thesis Card 会在归档页里并行存在，而不是彼此割裂。",
+        ],
+      },
+    ],
+  },
+  {
+    title: "账号、Provider 与数据",
+    icon: Database,
+    items: [
+      {
+        question: "为什么要先配置 Provider？",
+        answer: [
+          "Provider 配置决定了研究工作台调用哪些模型与检索链路。",
+          "你可以在设置页读取、保存、删除配置，设置默认项，并控制启用开关。",
+          "这部分属于核心控制中心，所以工作台的研究质量和稳定性与它直接相关。",
+        ],
+      },
+      {
+        question: "我需要登录后才能使用哪些能力？",
+        answer: [
+          "登录后才能访问工作台、归档页、设置页以及与个人会话、Provider 配置相关的内容。",
+          "未登录时，受保护路由会回到登录页，以避免泄露研究资产或个人配置。",
+          "公开页面仍然可以查看产品说明、FAQ、隐私政策与服务条款。",
+        ],
+      },
+      {
+        question: "系统会代替我下单或给个性化投资建议吗？",
+        answer: [
+          "不会。当前活跃主线是研究工作台，而不是自动交易壳。",
+          "产品输出面向研究和信息组织，不提供个性化买卖建议、仓位建议、止损止盈指令或收益承诺。",
+          "你应当把它视为研究辅助工具，而不是执行交易的代理人。",
+        ],
+      },
+    ],
+  },
+  {
+    title: "合规与边界",
+    icon: ShieldCheck,
+    items: [
+      {
+        question: "引用和来源如何使用？",
+        answer: [
+          "Structured Research View 会展示 citations，帮助你回看研究依据。",
+          "引用的存在不等于结论必然正确，但它能提升可追溯性，方便你复核来源与上下文。",
+          "对于高风险判断，建议结合原始资料与独立研究做二次确认。",
+        ],
+      },
+      {
+        question: "能不能把回答当成正式投资建议？",
+        answer: [
+          "不能。平台提供的是 research-only 输出，不构成个性化投资建议、法律建议或税务建议。",
+          "金融市场变化迅速，模型也会有局限性、偏差和信息滞后。",
+          "请把本产品作为研究助手使用，并对自己的判断与行为负责。",
+        ],
+      },
+    ],
+  },
+];
 
-  // Scroll to top when component mounts
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
+export default function FAQ() {
+  const [openItems, setOpenItems] = useState<Set<string>>(new Set(["0-0", "1-0", "2-0"]));
 
-  const toggleCollapse = (itemKey: string) => {
-    setCollapsedItems(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(itemKey)) {
-        newSet.delete(itemKey);
+  const toggleItem = (key: string) => {
+    setOpenItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
       } else {
-        newSet.add(itemKey);
+        next.add(key);
       }
-      return newSet;
+      return next;
     });
   };
 
-  const faqSections: FAQSection[] = [
-    {
-      title: "Getting Started",
-      icon: <Zap className="w-5 h-5" />,
-      items: [
-        {
-          question: "What is TradingGoose?",
-          answer: "TradingGoose is an AI-powered platform that provides structured analysis workflows for processing market data. It uses a sophisticated multi-agent AI system with 15+ specialized agents to analyze stocks and provide informational insights.\n\n**Requirements**:\n- Alpaca API credentials (PAPER or LIVE account)\n- At least one configured AI provider (OpenAI, Anthropic, etc.)\n\nThe platform does NOT execute trades or provide investment advice - it's purely an informational tool that helps you process and understand market data through AI-powered workflows."
-        },
-        {
-          question: "How do I get started with TradingGoose?",
-          answer: "Getting started with TradingGoose:\n\n1. **Create an Account**: Sign up with your email address\n2. **Configure AI Provider (Required)**: Add at least one AI provider API key (OpenAI, Anthropic, etc.) in Settings - this is required for the platform to function\n3. **Connect Alpaca (Required)**: Add your Alpaca API credentials (either PAPER or LIVE account) - this is required even if you only want to analyze stocks\n4. **Set Default AI Provider**: Choose your default AI provider in Settings\n5. **Start Analyzing**: Use the Dashboard to analyze stocks or set up portfolio rebalancing workflows\n\n**Important**: Both Alpaca API and at least one AI provider are required for TradingGoose to work. All API keys are securely encrypted and stored in Supabase's protected database."
-        },
-        {
-          question: "Do I need coding knowledge to use TradingGoose?",
-          answer: "No coding knowledge is required! TradingGoose provides an intuitive user interface for all features. The platform handles all the complex AI orchestration and workflow management behind the scenes. You simply need to:\n\n- Enter stock symbols you want to analyze\n- Configure your preferences in settings\n- Review the AI-generated insights and analysis\n\nThe platform is designed to be accessible to both technical and non-technical users."
-        }
-      ]
-    },
-    {
-      title: "AI Agents, Analysis & Trading",
-      icon: <Bot className="w-5 h-5" />,
-      items: [
-        {
-          question: "How does the multi-agent AI system work?",
-          answer: "TradingGoose orchestrates **15+ specialized AI agents** through a sophisticated 5-phase analysis workflow, ensuring comprehensive market analysis from multiple perspectives.\n\n## 📊 **Phase 1: Data Analysis**\nFive specialist analysts gather and process diverse data sources:\n- **🌍 Macro Analyst**: Economic indicators, treasury data, global market trends\n- **📈 Market Analyst**: Technical indicators, price patterns, historical data from Yahoo Finance\n- **📰 News Analyst**: Breaking news, market sentiment from Bloomberg, Reuters, and financial media\n- **💬 Social Media Analyst**: Social sentiment, trending discussions from Reddit, YouTube, Twitter\n- **🏢 Fundamentals Analyst**: Company financials, earnings, balance sheets, insider trading data\n\n## 🔬 **Phase 2: Research Debate**\nTwo researchers present opposing viewpoints:\n- **🟢 Bull Researcher**: Presents optimistic evidence and growth potential\n- **🔴 Bear Researcher**: Highlights risks and potential downsides\n- **⚖️ Research Manager**: Synthesizes both perspectives into balanced insights\n\n## 💹 **Phase 3: Trading Decision**\n- **Trader Agent**: Evaluates all research to provide clear **BUY**, **SELL**, or **HOLD** recommendations with detailed reasoning\n\n## 🛡️ **Phase 4: Risk Assessment**\nThree risk analysts evaluate from different perspectives:\n- **⚠️ Risky Analyst**: Advocates for high-return opportunities, aggressive strategies\n- **🔒 Safe Analyst**: Emphasizes capital preservation and conservative approaches\n- **⚡ Neutral Analyst**: Provides balanced risk-reward perspective\n- **Risk Manager**: Combines all risk analyses to determine final risk rating and signals\n\n## 📊 **Phase 5: Portfolio Management**\n- **Portfolio Manager**: Determines optimal position sizing, portfolio allocation, and execution strategy based on:\n  - User's risk tolerance\n  - Current portfolio composition\n  - Market conditions\n  - Risk assessment outcomes\n\n### 💡 **Key Benefits**\n- **Multi-perspective analysis**: Every stock is evaluated from 15+ different angles\n- **Built-in debate mechanism**: Bull vs Bear ensures balanced analysis\n- **Risk-adjusted recommendations**: Three-tier risk assessment prevents blind spots\n- **Portfolio-aware decisions**: Final recommendations consider your entire portfolio\n- **Data diversity**: Combines technical, fundamental, sentiment, and macro analysis"
-        },
-        {
-          question: "What AI providers does TradingGoose support?",
-          answer: "TradingGoose supports multiple AI providers:\n\n- **OpenAI** (GPT-4, GPT-3.5)\n- **Anthropic** (Claude 3.5, Claude 3)\n- **Google** (Gemini Pro)\n- **Groq** (Fast inference models)\n- **Local Models** via Ollama\n\n**Important**: You must configure at least one AI provider with a valid API key for TradingGoose to function. You can then:\n- Set a default AI provider in Settings\n- Configure different providers for different agents\n- Switch between providers based on your needs\n\nAll API keys are encrypted and securely stored in Supabase's protected database."
-        },
-        {
-          question: "How accurate are the AI-generated insights?",
-          answer: "**Important**: AI-generated insights are for informational purposes only and should NOT be used as the sole basis for investment decisions.\n\n- AI analyses are based on historical data and current information\n- Market conditions can change rapidly and unpredictably\n- AI systems have inherent limitations and biases\n- Past performance does not guarantee future results\n\n**Always**:\n- Conduct your own research\n- Consult with qualified financial advisors\n- Consider multiple sources of information\n- Understand that all investments carry risk"
-        },
-        {
-          question: "Can I customize which AI agents are used?",
-          answer: "You can customize AI agent configuration in Settings:\n\n**What you CAN configure**:\n- Choose different AI providers for different agent teams (Analysis, Research, Trading, Risk, Portfolio Manager)\n- Set different AI models for each team\n- Configure **Max Tokens** (500-8000) for each agent team to control response length\n- Adjust analysis optimization level (Speed vs Balanced)\n- Set historical data range for analysis\n- Configure number of debate rounds for research agents\n\n**What you CANNOT configure**:\n- Cannot enable/disable specific agents (all agents in the workflow are required)\n- Cannot configure timeouts for individual agents\n\nThe multi-agent system works as an integrated workflow where all agents are essential for comprehensive analysis."
-        },
-        {
-          question: "Can TradingGoose execute trades automatically?",
-          answer: "TradingGoose itself does NOT execute trades. However:\n\n- You can configure auto-execution through your connected Alpaca account\n- TradingGoose provides the analysis and signals\n- Your Alpaca account handles the actual trade execution\n- You maintain full control over execution settings\n- All trades happen directly between you and Alpaca\n\nThink of TradingGoose as providing the 'brain' (analysis) while Alpaca provides the 'hands' (execution)."
-        },
-        {
-          question: "How does portfolio rebalancing work?",
-          answer: "Portfolio rebalancing follows a systematic approach:\n\n1. **Configuration**: Set your target allocations and thresholds\n2. **Monitoring**: System checks for drift from targets\n3. **Analysis**: When thresholds are exceeded, full analysis runs\n4. **Recommendations**: AI agents provide rebalancing suggestions\n5. **Execution** (Optional): Execute through your Alpaca account\n\nYou can schedule automatic rebalancing checks or trigger them manually. All rebalancing decisions remain under your control."
-        },
-        {
-          question: "What is the difference between Analysis and Rebalance?",
-          answer: "**Analysis**: Single-stock deep dive\n- Comprehensive analysis of one stock\n- All 15+ agents provide insights\n- Includes trading recommendation (BUY/SELL/HOLD)\n- Results in detailed report with multiple perspectives\n\n**Rebalance**: Portfolio-level optimization\n- Analyzes multiple stocks in your watchlist\n- Focuses on portfolio allocation\n- Considers risk distribution\n- Provides specific rebalancing actions\n- Can be scheduled for automatic monitoring"
-        },
-        {
-          question: "Can I paper trade before using real money?",
-          answer: "Yes! Alpaca provides paper trading accounts:\n\n1. Create a paper trading account on Alpaca\n2. Use paper trading API keys in TradingGoose\n3. Test all features without real money\n4. Analyze your performance and refine strategies\n5. Switch to live trading when ready\n\nWe strongly recommend starting with paper trading to understand the platform and test your strategies."
-        }
-      ]
-    },
-    {
-      title: "Security & Privacy",
-      icon: <Shield className="w-5 h-5" />,
-      items: [
-        {
-          question: "How are my API credentials stored?",
-          answer: "**Your API credentials are securely stored using Supabase's encrypted database.**\n\nAll sensitive credentials (AI API keys, Alpaca keys) are:\n- Stored in Supabase, a secure database-as-a-service platform\n- Protected by Supabase's enterprise-grade encryption at rest and in transit\n- Subject to Supabase's SOC 2 Type II compliance and security standards\n- Encrypted using industry-standard algorithms\n- Accessible only through authenticated API calls\n\nSupabase provides:\n- Row Level Security (RLS) ensuring users can only access their own credentials\n- SSL/TLS encryption for all data transfers\n- Regular security audits and compliance certifications\n- Automatic backups and data redundancy\n\n**Why we store credentials**: This allows TradingGoose to run analyses in the backend - you can start an analysis, close your browser, and return later to see the results. Your credentials are never stored in plain text and are protected by multiple layers of security."
-        },
-        {
-          question: "Does TradingGoose have access to my trading account?",
-          answer: "**No, TradingGoose does NOT directly access or control your trading account.**\n\n- Your Alpaca credentials are encrypted and stored securely in Supabase\n- Trading connections are made from our secure backend to Alpaca on your behalf\n- We don't monitor or log your individual trades\n- We can't execute trades without your explicit action\n- We don't store or access your portfolio balance or positions beyond what you request\n\nTradingGoose acts as a secure intermediary:\n- Your credentials are encrypted and used only for authorized API calls\n- All trading operations require your explicit confirmation\n- You maintain full control over your trading account through Alpaca"
-        },
-        {
-          question: "What data does TradingGoose collect?",
-          answer: "TradingGoose collects the following data to provide our services:\n\n**We collect and securely store**:\n- Email address (for authentication)\n- Username and preferences\n- **Encrypted API credentials** (AI providers and Alpaca) - stored securely in Supabase to run analyses in the backend\n- Workflow configurations and analysis settings\n- Stock symbols you've searched (public information)\n- Platform usage statistics\n\n**We do NOT collect or store**:\n- Actual trading positions or balances from your brokerage\n- Financial account numbers\n- Credit card or banking information\n- Personal investment strategies beyond what you configure\n\n**Why we store API credentials**: By securely storing your encrypted API keys, we can run analyses in our backend servers. This means you don't need to keep your browser open - you can start an analysis and come back later to see the results."
-        },
-        {
-          question: "Is my data shared with third parties?",
-          answer: "**TradingGoose does NOT sell, trade, or rent your personal information.**\n\nWe NEVER share:\n- Your encrypted API credentials\n- Trading account information\n- Personal financial data\n- Individual usage patterns\n- Any user data with third parties\n\nYour data remains private and is used solely for providing TradingGoose services to you."
-        }
-      ]
-    },
-    {
-      title: "Subscription & Billing",
-      icon: <DollarSign className="w-5 h-5" />,
-      items: [
-        {
-          question: "What does TradingGoose cost?",
-          answer: "TradingGoose offers different pricing tiers to suit various needs. Please check our pricing page for current plans.\n\n**Important costs to consider**:\n- TradingGoose subscription fee\n- AI API costs (paid directly to providers like OpenAI)\n- Alpaca trading fees (if applicable)\n- Market data fees (if using premium data)\n\nNote: AI API costs can vary significantly based on usage. We recommend starting with conservative usage and monitoring your costs."
-        },
-        {
-          question: "Do I need to pay for AI API usage separately?",
-          answer: "**Yes, AI API costs are separate from TradingGoose subscription.**\n\n- You pay AI providers (OpenAI, Anthropic, etc.) directly\n- Costs depend on your usage volume\n- Different models have different pricing\n- You can set spending limits with most providers\n- Consider starting with cheaper models (GPT-3.5) before upgrading\n\nTradingGoose does not mark up or charge for AI API usage - you pay providers directly at their standard rates."
-        },
-        {
-          question: "Can I use TradingGoose without Alpaca?",
-          answer: "**No, Alpaca API is required for TradingGoose to function.**\n\nYou must have either:\n- **Alpaca PAPER account** (recommended for testing) - Free paper trading account for testing without real money\n- **Alpaca LIVE account** - For actual trading with real money\n\nEven if you only want to analyze stocks without trading, Alpaca API is required because:\n- It provides market data access\n- Powers portfolio analysis features\n- Enables the trading simulation workflows\n\nYou can start with a free Alpaca PAPER account to test all features without any financial risk."
-        }
-      ]
-    },
-    {
-      title: "Technical & Troubleshooting",
-      icon: <Settings className="w-5 h-5" />,
-      items: [
-        {
-          question: "What browsers are supported?",
-          answer: "TradingGoose works best on modern browsers:\n\n**Recommended**:\n- Chrome (version 90+)\n- Firefox (version 88+)\n- Safari (version 14+)\n- Edge (version 90+)\n\n**Not Supported**:\n- Internet Explorer\n- Older browser versions\n\nFor best performance, keep your browser updated to the latest version."
-        },
-        {
-          question: "Why is my analysis taking so long?",
-          answer: "Analysis time can vary based on several factors:\n\n**Common causes of delays**:\n- AI API rate limits (especially with free tiers)\n- Network connectivity issues\n- High demand on AI provider services\n- Complex analysis with many agents\n\n**Solutions**:\n- Check your API rate limits\n- Use faster AI providers (like Groq)\n- Ensure stable internet connection\n- Consider upgrading AI API tiers for higher limits"
-        },
-        {
-          question: "What should I do if I get an API error?",
-          answer: "**Common API errors and solutions**:\n\n**Invalid API Key**:\n- Double-check key in Settings\n- Ensure no extra spaces\n- Verify key is active with provider\n\n**Rate Limit Exceeded**:\n- Wait before retrying\n- Upgrade API plan\n- Reduce request frequency\n\n**Insufficient Credits**:\n- Add credits to your AI provider account\n- Switch to a cheaper model\n- Monitor usage more carefully\n\n**Connection Error**:\n- Check internet connection\n- Try refreshing the page\n- Verify provider service status"
-        },
-        {
-          question: "How can I optimize AI costs?",
-          answer: "**Tips to reduce AI API costs**:\n\n1. **Use appropriate models**: GPT-3.5 for simple tasks, GPT-4 for complex analysis\n2. **Limit agent usage**: Disable non-essential agents\n3. **Batch analyses**: Group multiple stocks in rebalancing instead of individual analyses\n4. **Set spending limits**: Configure limits with your AI provider\n5. **Monitor usage**: Regularly check your API usage dashboard\n6. **Use caching**: Avoid re-analyzing the same stock multiple times per day\n7. **Consider local models**: Use Ollama for some agents if you have capable hardware"
-        }
-      ]
-    }
-  ];
-
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Header />
+    <PublicContentLayout
+      eyebrow="FAQ"
+      title="常见问题与产品边界"
+      description="把 thesis-first、连续追问、事件增量更新、Thesis Card 资产沉淀和 research-only 护栏放在同一套产品语言里解释清楚。"
+      highlights={["thesis-first", "research-only", "archive-ready"]}
+    >
+      <section className="grid gap-6 xl:grid-cols-2">
+        {faqSections.map((section, sectionIndex) => {
+          const Icon = section.icon;
 
-      <main className="flex-1 container mx-auto px-6 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <HelpCircle className="h-8 w-8" />
-            Frequently Asked Questions
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Find answers to common questions about TradingGoose
-          </p>
-        </div>
-
-        <div className="space-y-8">
-          {faqSections.map((section, sectionIndex) => (
-            <div key={sectionIndex} className="space-y-4">
-              <div className="flex items-center gap-2 mb-4">
-                {section.icon}
-                <h2 className="text-xl font-semibold">{section.title}</h2>
-              </div>
-
-              {section.items.map((item, itemIndex) => {
-                const itemKey = `${sectionIndex}-${itemIndex}`;
-                const isCollapsed = collapsedItems.has(itemKey);
-
-                return (
-                  <Collapsible key={itemKey} open={!isCollapsed}>
-                    <Card className="overflow-hidden">
-                      <CollapsibleTrigger asChild>
-                        <CardHeader className="cursor-pointer hover:bg-muted/40 transition-colors">
-                          <CardTitle className="text-base flex items-center justify-between">
-                            <span className="pr-4">{item.question}</span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 shrink-0"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleCollapse(itemKey);
-                              }}
-                            >
-                              {isCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-                            </Button>
-                          </CardTitle>
-                        </CardHeader>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <CardContent className="pt-0 pb-6">
-                          <MarkdownRenderer
-                            content={item.answer}
-                            className="text-muted-foreground"
-                          />
-                        </CardContent>
-                      </CollapsibleContent>
-                    </Card>
-                  </Collapsible>
-                );
-              })}
-            </div>
-          ))}
-
-          {/* Contact Section */}
-          <Card className="mt-12 border-primary/30 bg-primary/5">
-            <CardContent className="pt-6">
-              <div className="flex items-start gap-4">
-                <Users className="h-6 w-6 text-primary mt-1 flex-shrink-0" />
-                <div>
-                  <h3 className="text-lg font-semibold mb-2">Still have questions?</h3>
-                  <p className="text-muted-foreground">
-                    If you couldn't find the answer you're looking for, please don't hesitate to reach out to our support team.
-                    We're here to help you get the most out of TradingGoose.
-                  </p>
-                  <Button
-                    className="mt-4"
-                    variant="default"
-                    onClick={() => window.open('https://discord.gg/wavf5JWhuT', '_blank')}
-                  >
-                    Contact Support
-                  </Button>
+          return (
+            <Card key={section.title} className="panel-card overflow-hidden border-0 shadow-none">
+              <CardHeader className="space-y-3 pb-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm">
+                  <Icon className="h-5 w-5" />
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+                <div>
+                  <p className="section-kicker">Section {sectionIndex + 1}</p>
+                  <CardTitle className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
+                    {section.title}
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {section.items.map((item, itemIndex) => {
+                  const key = `${sectionIndex}-${itemIndex}`;
+                  const isOpen = openItems.has(key);
 
-          {/* Footer Note */}
-          <div className="text-center text-sm text-muted-foreground pt-8 pb-4">
-            <p className="italic">
-              <strong className="text-primary">TradingGoose</strong> - Providing structured AI analysis workflows for
-              informational purposes only.
+                  return (
+                    <Collapsible key={key} open={isOpen}>
+                      <div className="rounded-2xl border border-slate-200/80 bg-white/80">
+                        <CollapsibleTrigger asChild>
+                          <button
+                            type="button"
+                            className="flex w-full items-start justify-between gap-4 px-5 py-4 text-left"
+                            onClick={() => toggleItem(key)}
+                          >
+                            <span className="text-sm font-semibold leading-6 text-slate-950">
+                              {item.question}
+                            </span>
+                            <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-500">
+                              {isOpen ? (
+                                <ChevronUp className="h-4 w-4" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4" />
+                              )}
+                            </span>
+                          </button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <div className="space-y-3 border-t border-slate-100 px-5 pb-5 pt-4 text-sm leading-7 text-slate-600">
+                            {item.answer.map((paragraph) => (
+                              <p key={paragraph}>{paragraph}</p>
+                            ))}
+                          </div>
+                        </CollapsibleContent>
+                      </div>
+                    </Collapsible>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </section>
+
+      <section className="panel-card-muted rounded-[28px] px-6 py-6 sm:px-8">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-2">
+            <p className="section-kicker">Next Step</p>
+            <h2 className="text-2xl font-semibold tracking-tight text-slate-950">
+              想直接体验 thesis-first 的研究链路？
+            </h2>
+            <p className="max-w-2xl text-sm leading-6 text-slate-600">
+              登录后进入工作台，配置 Provider，然后从一个研究问题开始，继续追问，再尝试一次 event update，
+              你会最直观地感受到 Thesis Card 和 Archive 的差别。
             </p>
           </div>
+
+          <Button asChild className="w-full sm:w-auto">
+            <a href="/login">登录并进入工作台</a>
+          </Button>
         </div>
-      </main>
-
-      <Footer />
-    </div>
+      </section>
+    </PublicContentLayout>
   );
-};
-
-export default FAQ;
+}

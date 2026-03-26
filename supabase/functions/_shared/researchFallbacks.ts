@@ -212,7 +212,7 @@ export function buildFallbackStructuredOutput(params: {
       subject: params.subject,
       current_view: params.language === 'zh' ? '等待更多实时证据验证' : 'Needs more live evidence',
       direct_answer: params.language === 'zh'
-        ? '实时检索链路当前不完整，所以我先给出一个可讨论、可更新的 provisional thesis，而不是返回空结果。'
+        ? '实时检索链路当前不完整，所以我先给出一个可讨论、可更新的临时 thesis，而不是返回空结果。'
         : 'Live retrieval is incomplete right now, so I am returning a usable provisional thesis instead of an empty result.',
       core_judgment: params.language === 'zh'
         ? `${params.subject} 目前更适合用“先看盈利质量与预期差，再看价格波动”的框架来判断。`

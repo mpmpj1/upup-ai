@@ -238,7 +238,7 @@ Deno.serve(async (req) => {
     await supabase
       .from('analysis_history')
       .update({
-        decision: 'HOLD',
+        decision: 'PENDING',
         confidence: orchestrated.result.structured_output.degraded ? 45 : 70,
         analysis_status: 'completed',
         full_analysis: {
@@ -249,6 +249,13 @@ Deno.serve(async (req) => {
           scenarios: orchestrated.result.scenarios,
           risks: orchestrated.result.risks,
           citations: orchestrated.citations,
+          research_only: true,
+        },
+        metadata: {
+          research_only: true,
+          market_scope: body.market_scope || orchestrated.result.structured_output.market_scope,
+          query: body.query,
+          result_mode: 'research_only',
         },
         updated_at: new Date().toISOString(),
       })

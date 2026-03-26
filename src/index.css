@@ -2,82 +2,105 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
 @layer base {
   :root {
-    --background: 38 45% 98%;
-    --foreground: 222 47% 11%;
+    --background: 42 36% 98%;
+    --foreground: 222 34% 13%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 222 34% 13%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 222 34% 13%;
 
-    --primary: 42 96% 48%;
-    --primary-foreground: 222 47% 11%;
-    --primary-glow: 45 100% 58%;
+    --primary: 222 36% 17%;
+    --primary-foreground: 210 40% 98%;
+    --primary-glow: 37 92% 61%;
 
-    --secondary: 210 33% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 215 24% 95%;
+    --secondary-foreground: 222 34% 16%;
 
-    --muted: 210 33% 96%;
-    --muted-foreground: 215 16% 35%;
+    --muted: 38 22% 95%;
+    --muted-foreground: 215 15% 38%;
 
-    --accent: 42 96% 92%;
-    --accent-foreground: 222 47% 11%;
+    --accent: 38 88% 94%;
+    --accent-foreground: 222 34% 16%;
 
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 214 32% 91%;
+    --border: 215 22% 88%;
     --input: 0 0% 100%;
-    --ring: 42 96% 48%;
+    --ring: 36 88% 58%;
 
-    --radius: 0.5rem;
+    --radius: 1rem;
 
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 42 96% 48%;
-    --sidebar-primary-foreground: 222 47% 11%;
-    --sidebar-accent: 210 33% 96%;
-    --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 42 96% 48%;
+    --sidebar-foreground: 222 34% 13%;
+    --sidebar-primary: 222 36% 17%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 38 22% 95%;
+    --sidebar-accent-foreground: 222 34% 13%;
+    --sidebar-border: 215 22% 88%;
+    --sidebar-ring: 36 88% 58%;
 
-    /* Trading specific colors */
-    --buy: 142 70% 45%;
-    --buy-foreground: 210 10% 95%;
-    --sell: 0 72% 51%;
-    --sell-foreground: 210 10% 95%;
+    --buy: 142 64% 41%;
+    --buy-foreground: 210 40% 98%;
+    --sell: 0 72% 50%;
+    --sell-foreground: 210 40% 98%;
 
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(45 90% 51%), hsl(45 85% 58%));
-    --gradient-success: linear-gradient(135deg, hsl(142 70% 45%), hsl(142 75% 55%));
-    --gradient-danger: linear-gradient(135deg, hsl(0 72% 51%), hsl(0 75% 60%));
+    --gradient-primary: linear-gradient(135deg, hsl(222 36% 17%), hsl(222 28% 23%));
+    --gradient-success: linear-gradient(135deg, hsl(142 64% 41%), hsl(147 61% 49%));
+    --gradient-danger: linear-gradient(135deg, hsl(0 72% 50%), hsl(4 82% 58%));
 
-    /* Shadows */
-    --shadow-glow: 0 0 20px hsl(var(--primary) / 0.15);
-    --shadow-elevated: 0 10px 30px -12px hsl(222 47% 11% / 0.18);
+    --shadow-glow: 0 0 0 1px hsl(var(--ring) / 0.18), 0 22px 70px -42px hsl(var(--ring) / 0.45);
+    --shadow-elevated: 0 28px 80px -36px hsl(222 34% 13% / 0.3);
+    --shadow-soft: 0 18px 48px -30px hsl(222 34% 13% / 0.16);
 
-    /* Agent status colors */
     --agent-analyst: 210 70% 50%;
-    --agent-researcher: 45 70% 50%;
-    --agent-trader: 142 60% 45%;
-    --agent-risk: 0 72% 51%;
-
-    /* Transitions */
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --agent-researcher: 37 92% 61%;
+    --agent-trader: 142 64% 41%;
+    --agent-risk: 0 72% 50%;
   }
 
   .dark {
-    --background: 220 15% 5%;
-    --foreground: 210 10% 95%;
-    --card: 220 15% 8%;
-    --card-foreground: 210 10% 95%;
+    --background: 222 30% 8%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 28% 10%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 28% 10%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 36 88% 62%;
+    --primary-foreground: 222 34% 13%;
+    --primary-glow: 36 92% 68%;
+
+    --secondary: 222 18% 16%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 222 18% 16%;
+    --muted-foreground: 215 20% 70%;
+
+    --accent: 222 18% 16%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 66% 52%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 222 14% 22%;
+    --input: 222 20% 13%;
+    --ring: 36 88% 62%;
+
+    --sidebar-background: 222 28% 10%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 36 88% 62%;
+    --sidebar-primary-foreground: 222 34% 13%;
+    --sidebar-accent: 222 18% 16%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 222 14% 22%;
+    --sidebar-ring: 36 88% 62%;
   }
 }
 
@@ -86,229 +109,182 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    color-scheme: light;
+    scroll-behavior: smooth;
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply min-h-screen bg-background text-foreground antialiased;
+    background-image:
+      radial-gradient(circle at top left, hsl(36 88% 58% / 0.12), transparent 28%),
+      radial-gradient(circle at top right, hsl(214 35% 42% / 0.07), transparent 30%),
+      linear-gradient(180deg, hsl(var(--background)) 0%, hsl(36 33% 97%) 44%, hsl(210 25% 98%) 100%);
+    font-feature-settings: "ss01" 1, "cv02" 1, "cv03" 1;
+    text-rendering: optimizeLegibility;
+  }
+
+  #root {
+    @apply min-h-screen;
+  }
+
+  ::selection {
+    background: hsl(var(--ring) / 0.18);
+  }
+
+  a {
+    @apply transition-colors;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  input[type="date"] {
+    color-scheme: light;
   }
 }
 
 @layer components {
-  /* Premium button styles with subtle accents */
-  .btn-primary {
-    @apply bg-primary text-primary-foreground hover:bg-primary/90 font-medium shadow-sm hover:shadow-md transition-all duration-200 rounded-md px-4 py-2;
+  .page-shell {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6;
   }
 
-  .btn-secondary {
-    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border transition-all duration-200 rounded-md px-4 py-2;
+  .page-shell-narrow {
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-6;
   }
 
-  .btn-ghost {
-    @apply hover:bg-accent hover:text-accent-foreground transition-colors duration-200 rounded-md px-4 py-2;
+  .section-chip {
+    @apply inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-600 backdrop-blur-sm;
+    border-color: hsl(var(--border) / 0.7);
+    background-color: rgb(255 255 255 / 0.7);
   }
 
-  /* Card styles with subtle depth */
-  .card-enhanced {
-    @apply bg-card border border-border rounded-lg shadow-sm hover:shadow-md transition-all duration-200;
+  .section-kicker {
+    @apply text-[11px] font-semibold uppercase tracking-[0.26em] text-slate-500;
   }
 
-  /* Subtle glow effects */
-  .glow-subtle {
-    @apply shadow-sm hover:shadow-md transition-shadow duration-300;
+  .surface-card {
+    @apply rounded-[28px] border backdrop-blur-sm;
+    border-color: hsl(var(--border) / 0.7);
+    background-color: rgb(255 255 255 / 0.9);
+    box-shadow: var(--shadow-elevated);
   }
 
-  /* Premium gradient backgrounds */
-  .bg-premium {
-    @apply bg-gradient-to-br from-background via-card to-background;
+  .panel-card {
+    @apply rounded-[24px] border backdrop-blur-sm;
+    border-color: hsl(var(--border) / 0.7);
+    background-color: rgb(255 255 255 / 0.92);
+    box-shadow: var(--shadow-soft);
   }
 
-  /* Enhanced input fields */
-  .input-enhanced {
-    @apply bg-input border border-border focus:border-primary focus:ring-1 focus:ring-primary/20 rounded-md transition-all duration-200;
+  .panel-card-muted {
+    @apply rounded-[24px] border;
+    border-color: hsl(var(--border) / 0.7);
+    background-color: rgb(248 250 252 / 0.88);
   }
 
-  /* Subtle gradient border */
-  .gradient-border {
-    @apply relative;
-    background: linear-gradient(var(--background), var(--background)) padding-box,
-              linear-gradient(90deg, hsl(var(--primary)/0.3), hsl(var(--accent)/0.3)) border-box;
-    border: 1px solid transparent;
+  .glass-panel {
+    @apply rounded-[24px] border backdrop-blur-xl;
+    border-color: rgb(255 255 255 / 0.7);
+    background-color: rgb(255 255 255 / 0.72);
+    box-shadow: var(--shadow-soft);
   }
 
-  /* Hover lift effect */
-  .hover-lift {
-    @apply transition-transform duration-200 hover:-translate-y-0.5;
-  }
-
-  /* Glass morphism effect */
-  .glass {
-    @apply bg-card/80 backdrop-blur-sm border border-border/50;
-  }
-
-  /* Date input dark mode styling */
-  input[type="date"] {
-    color-scheme: dark;
-    position: relative;
-    padding-right: 40px;
-  }
-  
-  input[type="date"]::-webkit-calendar-picker-indicator {
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23fc0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='4' width='18' height='18' rx='2' ry='2'></rect><line x1='16' y1='2' x2='16' y2='6'></line><line x1='8' y1='2' x2='8' y2='6'></line><line x1='3' y1='10' x2='21' y2='10'></line></svg>");
-    background-repeat: no-repeat;
+  .hero-grid {
+    background-image:
+      linear-gradient(to right, hsl(215 22% 88% / 0.55) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(215 22% 88% / 0.55) 1px, transparent 1px);
     background-position: center;
-    background-size: 18px 18px;
-    opacity: 0.7;
-    transition: all 0.2s ease;
-  }
-  
-  input[type="date"]::-webkit-calendar-picker-indicator:hover {
-    opacity: 1;
-    transform: translateY(-50%) scale(1.1);
-  }
-  
-  input[type="date"]:focus {
-    border-color: #fc0 !important;
-    box-shadow: 0 0 0 3px rgba(255, 204, 0, 0.1) !important;
-  }
-  
-  input[type="date"]:focus::-webkit-calendar-picker-indicator {
-    opacity: 1;
-  }
-  
-  /* Firefox date input styling */
-  input[type="date"]::-moz-calendar-picker-indicator {
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23fc0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='4' width='18' height='18' rx='2' ry='2'></rect><line x1='16' y1='2' x2='16' y2='6'></line><line x1='8' y1='2' x2='8' y2='6'></line><line x1='3' y1='10' x2='21' y2='10'></line></svg>");
-    opacity: 0.7;
-  }
-  
-  /* Override any default blue button colors */
-  button:focus-visible {
-    outline: 2px solid #fc0 !important;
-    outline-offset: 2px;
-  }
-  
-  /* Ensure popover has proper rounded corners */
-  [data-radix-popper-content-wrapper] > div {
-    border-radius: 12px !important;
-  }
-  
-  /* Remove square backgrounds from calendar cells */
-  .rdp-cell {
-    background: transparent !important;
-  }
-  
-  /* Ensure cell doesn't show square highlight behind selected buttons */
-  .rdp-cell:has([aria-selected="true"]) {
-    background: transparent !important;
-  }
-  
-  
-  /* Premium text gradient */
-  .text-gradient {
-    @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
+    background-size: 28px 28px;
   }
 
-  /* Status indicators - keeping original colors */
-  .status-active, .status-success {
-    @apply bg-green-600 text-white border border-green-700;
-  }
-
-  .status-pending, .status-warning {
-    @apply bg-yellow-600 text-white border border-yellow-700;
-  }
-
-  .status-error, .status-danger {
-    @apply bg-red-600 text-white border border-red-700;
-  }
-  
-  .status-info {
-    @apply bg-blue-600 text-white border border-blue-700;
-  }
-  
-  .status-neutral {
-    @apply bg-gray-600 text-white border border-gray-700;
-  }
-
-  /* Navigation item hover effects */
-  .nav-item {
-    @apply relative px-4 py-2 text-muted-foreground hover:text-foreground transition-colors duration-200 
-           after:absolute after:bottom-0 after:left-4 after:right-4 after:h-px after:scale-x-0 hover:after:scale-x-100 
-           after:bg-primary after:transition-transform after:duration-200;
-  }
-
-  /* Premium badge */
-  .badge-premium {
-    @apply bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-md text-xs font-medium;
-  }
-
-  /* Section dividers */
-  .divider-subtle {
+  .subtle-divider {
     @apply h-px bg-gradient-to-r from-transparent via-border to-transparent;
   }
 
-  /* Scrollbar customization */
+  .research-prose {
+    @apply max-w-none text-sm leading-7 text-slate-700;
+  }
+
+  .research-prose :where(h1, h2, h3, h4, h5, h6) {
+    @apply mb-3 mt-6 text-slate-950 first:mt-0;
+  }
+
+  .research-prose h1 {
+    @apply text-2xl font-semibold tracking-tight;
+  }
+
+  .research-prose h2 {
+    @apply text-xl font-semibold tracking-tight;
+  }
+
+  .research-prose h3 {
+    @apply text-lg font-semibold;
+  }
+
+  .research-prose :where(p, ul, ol, blockquote) {
+    @apply my-3;
+  }
+
+  .research-prose :where(ul, ol) {
+    @apply pl-5;
+  }
+
+  .research-prose strong {
+    @apply font-semibold text-slate-900;
+  }
+
+  .research-prose a {
+    @apply text-slate-900 underline underline-offset-4;
+  }
+
+  .metric-value {
+    @apply text-2xl font-semibold tracking-tight text-slate-950;
+  }
+
+  .metric-label {
+    @apply text-xs font-medium uppercase tracking-[0.22em] text-slate-500;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .bg-premium {
+    background-image:
+      radial-gradient(circle at top left, hsl(36 88% 58% / 0.14), transparent 24%),
+      linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.94));
+  }
+
+  .bg-premium-muted {
+    background-image:
+      radial-gradient(circle at top right, hsl(214 35% 42% / 0.08), transparent 28%),
+      linear-gradient(160deg, rgba(248, 250, 252, 0.96), rgba(255, 251, 235, 0.68));
+  }
+
+  .badge-soft {
+    @apply inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium text-slate-600;
+    border-color: hsl(var(--border) / 0.7);
+    background-color: rgb(255 255 255 / 0.8);
+  }
+
+  .focus-surface {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+
   ::-webkit-scrollbar {
-    @apply w-2 h-2;
+    @apply h-2.5 w-2.5;
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-background rounded-full;
+    @apply bg-transparent;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-primary/30 rounded-full hover:bg-primary/50 transition-colors;
-  }
-
-  /* Additional utility classes */
-  .transition-smooth {
-    @apply transition-all duration-300 ease-in-out;
-  }
-
-  .shadow-premium {
-    box-shadow: 0 10px 40px -10px hsl(var(--primary) / 0.1);
-  }
-
-  .border-gradient {
-    border-image: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent))) 1;
-  }
-
-  /* Focus styles */
-  .focus-visible-ring {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
-  }
-
-  /* Table enhancements */
-  .table-hover tbody tr {
-    @apply hover:bg-muted/50 transition-colors;
-  }
-
-  /* Loading animations */
-  @keyframes pulse-subtle {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-  }
-
-  .animate-pulse-subtle {
-    animation: pulse-subtle 2s ease-in-out infinite;
-  }
-
-  /* Gradient animations */
-  @keyframes gradient-shift {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-  }
-
-  .animate-gradient {
-    background-size: 200% 200%;
-    animation: gradient-shift 3s ease infinite;
+    @apply rounded-full bg-slate-300 transition-colors hover:bg-slate-400;
   }
 }
-
-
-

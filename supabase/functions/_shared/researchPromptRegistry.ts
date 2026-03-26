@@ -1,5 +1,10 @@
 import { MarketOverlayKey, PROMPT_COMPOSITION_ORDER, RESEARCH_PROMPT_ASSETS } from './researchPrompts/promptAssets.ts';
-import type { CitationItem, ResearchConversationContinuity, ResearchTaskType } from './researchSchemas.ts';
+import {
+  getStructuredOutputFieldGuide,
+  type CitationItem,
+  type ResearchConversationContinuity,
+  type ResearchTaskType,
+} from './researchSchemas.ts';
 import type { ClassifiedResearchTask } from './researchTaskClassifier.ts';
 
 function containsChinese(text: string) {
@@ -9,6 +14,10 @@ function containsChinese(text: string) {
 export function resolveResponseLanguage(query: string, marketScope?: string): 'zh' | 'en' {
   if (containsChinese(query)) {
     return 'zh';
+  }
+
+  if (/[a-z]/i.test(query)) {
+    return 'en';
   }
 
   const normalized = String(marketScope || '').toLowerCase();
@@ -163,6 +172,7 @@ export function buildResearchUserPrompt(params: {
           .map((item) => `${item.display_name} (${item.symbol})`)
           .join(', ')
       : params.classifier.subject_hint;
+  const fieldGuide = getStructuredOutputFieldGuide(params.classifier.task_type);
 
   return [
     `Task type: ${params.classifier.task_type}`,
@@ -183,27 +193,10 @@ export function buildResearchUserPrompt(params: {
     'Retrieval sources:',
     formatSources(params.citations),
     '',
-    'Return only valid JSON with these keys:',
-    '- subject',
-    '- current_view',
-    '- direct_answer',
-    '- core_judgment',
-    '- bull_case (array, max 4)',
-    '- bear_case (array, max 4)',
-    '- key_variables (array, max 4)',
-    '- strongest_counterargument',
-    '- mind_change_conditions (array, max 4)',
-    '- one_line_takeaway',
-    '- facts (array, optional)',
-    '- inference (array, optional)',
-    '- assumptions (array, optional)',
-    '- short_term_catalysts (array, optional)',
-    '- medium_term_drivers (array, optional)',
-    '- long_term_thesis (array, optional)',
-    '- thesis_change_vs_price_action (optional)',
-    '- impact_on_current_thesis',
-    '- thesis_update',
-    '- top_things_to_watch (array, optional)',
-    '- watch_list (array, optional)',
+    'Return only valid JSON that matches this contract.',
+    'Required keys:',
+    ...fieldGuide.required.map((line) => `- ${line}`),
+    'Optional keys:',
+    ...fieldGuide.optional.map((line) => `- ${line}`),
   ].join('\n');
 }

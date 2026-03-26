@@ -25,6 +25,7 @@ import {
 import { loadResearchConversationState } from './researchConversationState.ts';
 import { buildFallbackStructuredOutput } from './researchFallbacks.ts';
 import {
+  buildStructuredOutputJsonSchema,
   buildOutOfScopeStructuredOutput,
   buildThesisCard,
   normalizeStructuredOutput,
@@ -32,8 +33,10 @@ import {
   renderThesisCardMarkdown,
   structuredOutputToLegacy,
   type CitationItem,
+  type ResearchConversationContinuity,
   type ResearchStructuredOutput,
   type ThesisCardContent,
+  validateStructuredOutputDraft,
 } from './researchSchemas.ts';
 
 interface ResearchLog {
@@ -199,6 +202,52 @@ function buildStructuredResult(
   };
 }
 
+function applyContinuityDefaults(
+  structuredOutput: ResearchStructuredOutput,
+  continuity?: ResearchConversationContinuity,
+) {
+  const latest = continuity?.latest_structured_output;
+
+  if (
+    !latest ||
+    (structuredOutput.task_type !== 'follow_up' && structuredOutput.task_type !== 'event_update')
+  ) {
+    return structuredOutput;
+  }
+
+  return {
+    ...structuredOutput,
+    current_view: structuredOutput.current_view || latest.current_view,
+    bull_case: structuredOutput.bull_case.length > 0 ? structuredOutput.bull_case : latest.bull_case,
+    bear_case: structuredOutput.bear_case.length > 0 ? structuredOutput.bear_case : latest.bear_case,
+    key_variables:
+      structuredOutput.key_variables.length > 0 ? structuredOutput.key_variables : latest.key_variables,
+    strongest_counterargument:
+      structuredOutput.strongest_counterargument || latest.strongest_counterargument,
+    mind_change_conditions:
+      structuredOutput.mind_change_conditions.length > 0
+        ? structuredOutput.mind_change_conditions
+        : latest.mind_change_conditions,
+    facts: structuredOutput.facts.length > 0 ? structuredOutput.facts : latest.facts,
+    inference: structuredOutput.inference.length > 0 ? structuredOutput.inference : latest.inference,
+    assumptions:
+      structuredOutput.assumptions.length > 0 ? structuredOutput.assumptions : latest.assumptions,
+    short_term_catalysts:
+      structuredOutput.short_term_catalysts.length > 0
+        ? structuredOutput.short_term_catalysts
+        : latest.short_term_catalysts,
+    medium_term_drivers:
+      structuredOutput.medium_term_drivers.length > 0
+        ? structuredOutput.medium_term_drivers
+        : latest.medium_term_drivers,
+    long_term_thesis:
+      structuredOutput.long_term_thesis.length > 0
+        ? structuredOutput.long_term_thesis
+        : latest.long_term_thesis,
+    watch_list: structuredOutput.watch_list.length > 0 ? structuredOutput.watch_list : latest.watch_list,
+  };
+}
+
 function selectRetrievalFocus(
   taskType: ResearchStructuredOutput['task_type'],
   marketScope: string,
@@ -228,12 +277,14 @@ export async function orchestrateResearch(
   },
 ): Promise<OrchestratedResearchResult> {
   const logs: ResearchLog[] = [];
+  const requestedLanguage = resolveResponseLanguage(request.query, request.market_scope);
 
   const continuity = await loadResearchConversationState(
     supabase,
     userId,
     request.conversation_id,
     request.market_scope,
+    requestedLanguage,
   );
   addLog(logs, 'continuity', 'Loaded conversation continuity.', {
     has_prior_thesis: continuity.has_prior_thesis,
@@ -404,17 +455,29 @@ export async function orchestrateResearch(
       prompt: userPrompt,
       temperature: 0.2,
       maxTokens: 1800,
+      jsonSchema: buildStructuredOutputJsonSchema(classifier.task_type),
+      jsonSchemaName: `research_${classifier.task_type}`,
     });
+    const validation = validateStructuredOutputDraft(rawModelOutput, classifier.task_type);
 
-    structuredOutput = normalizeStructuredOutput(rawModelOutput, {
-      taskType: classifier.task_type,
-      marketScope: classifier.market_scope,
-      subject: classifier.subject_hint,
-      language,
-      citations,
-      complianceFlags,
-      degraded,
-    });
+    if (!validation.ok) {
+      throw new Error(
+        `Structured output missing required fields: ${validation.missing.join(', ')}`,
+      );
+    }
+
+    structuredOutput = applyContinuityDefaults(
+      normalizeStructuredOutput(rawModelOutput, {
+        taskType: classifier.task_type,
+        marketScope: classifier.market_scope,
+        subject: classifier.subject_hint,
+        language,
+        citations,
+        complianceFlags,
+        degraded,
+      }),
+      continuity,
+    );
     addLog(logs, 'synthesis', 'Generated structured thesis output.', {
       task_type: structuredOutput.task_type,
       subject: structuredOutput.subject,

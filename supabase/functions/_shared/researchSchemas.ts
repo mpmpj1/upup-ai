@@ -105,6 +105,91 @@ export interface ResearchConversationContinuity {
   }>;
 }
 
+const FULL_STRUCTURED_FIELDS = [
+  'subject',
+  'current_view',
+  'direct_answer',
+  'core_judgment',
+  'bull_case',
+  'bear_case',
+  'key_variables',
+  'strongest_counterargument',
+  'mind_change_conditions',
+  'one_line_takeaway',
+] as const;
+
+const ALL_OPTIONAL_FIELDS = [
+  'subject',
+  'current_view',
+  'direct_answer',
+  'core_judgment',
+  'bull_case',
+  'bear_case',
+  'key_variables',
+  'strongest_counterargument',
+  'mind_change_conditions',
+  'one_line_takeaway',
+  'facts',
+  'inference',
+  'assumptions',
+  'short_term_catalysts',
+  'medium_term_drivers',
+  'long_term_thesis',
+  'thesis_change_vs_price_action',
+  'impact_on_current_thesis',
+  'thesis_update',
+  'top_things_to_watch',
+  'watch_list',
+] as const;
+
+const TASK_REQUIRED_FIELDS: Record<ResearchTaskType, string[]> = {
+  initial_thesis: [...FULL_STRUCTURED_FIELDS],
+  follow_up: [
+    'subject',
+    'direct_answer',
+    'core_judgment',
+    'impact_on_current_thesis',
+    'thesis_update',
+    'one_line_takeaway',
+  ],
+  event_update: [
+    'subject',
+    'direct_answer',
+    'core_judgment',
+    'impact_on_current_thesis',
+    'thesis_update',
+    'top_things_to_watch',
+    'one_line_takeaway',
+  ],
+  thesis_card: [...FULL_STRUCTURED_FIELDS, 'watch_list'],
+  out_of_scope: ['subject', 'current_view', 'direct_answer', 'core_judgment', 'one_line_takeaway'],
+};
+
+const FIELD_DESCRIPTIONS: Record<string, string> = {
+  subject: 'string',
+  current_view: 'string',
+  direct_answer: 'string',
+  core_judgment: 'string',
+  bull_case: 'string[] (max 4)',
+  bear_case: 'string[] (max 4)',
+  key_variables: 'string[] (max 4)',
+  strongest_counterargument: 'string',
+  mind_change_conditions: 'string[] (max 4)',
+  one_line_takeaway: 'string',
+  facts: 'string[] (max 4)',
+  inference: 'string[] (max 4)',
+  assumptions: 'string[] (max 4)',
+  short_term_catalysts: 'string[] (max 4)',
+  medium_term_drivers: 'string[] (max 4)',
+  long_term_thesis: 'string[] (max 4)',
+  thesis_change_vs_price_action: 'string',
+  impact_on_current_thesis:
+    'enum(strengthens | weakens | unchanged | new | not_applicable)',
+  thesis_update: 'string',
+  top_things_to_watch: 'string[] (max 4)',
+  watch_list: 'string[] (max 6)',
+};
+
 function containsChinese(text: string) {
   return /[\u3400-\u9fff]/.test(text);
 }
@@ -248,19 +333,35 @@ function outOfScopeAnswer(language: 'zh' | 'en') {
 function normalizeImpact(value: unknown): ThesisImpact {
   const normalized = String(value || '').toLowerCase();
 
-  if (normalized.includes('strength')) {
+  if (
+    normalized.includes('strength') ||
+    normalized.includes('强化') ||
+    normalized.includes('增强') ||
+    normalized.includes('更强')
+  ) {
     return 'strengthens';
   }
 
-  if (normalized.includes('weak')) {
+  if (
+    normalized.includes('weak') ||
+    normalized.includes('削弱') ||
+    normalized.includes('减弱') ||
+    normalized.includes('转弱')
+  ) {
     return 'weakens';
   }
 
-  if (normalized.includes('unchanged') || normalized.includes('no change')) {
+  if (
+    normalized.includes('unchanged') ||
+    normalized.includes('no change') ||
+    normalized.includes('不变') ||
+    normalized.includes('没有变化') ||
+    normalized.includes('无变化')
+  ) {
     return 'unchanged';
   }
 
-  if (normalized.includes('new')) {
+  if (normalized.includes('new') || normalized.includes('新增') || normalized.includes('新的')) {
     return 'new';
   }
 
@@ -270,15 +371,109 @@ function normalizeImpact(value: unknown): ThesisImpact {
 function normalizeConfidence(value: unknown): ConfidenceLevel {
   const normalized = String(value || '').toLowerCase();
 
-  if (normalized.includes('low')) {
+  if (normalized.includes('low') || normalized.includes('低')) {
     return 'low';
   }
 
-  if (normalized.includes('high')) {
+  if (normalized.includes('high') || normalized.includes('高')) {
     return 'high';
   }
 
   return 'medium';
+}
+
+export function getStructuredOutputContract(taskType: ResearchTaskType) {
+  const required = Array.from(new Set(TASK_REQUIRED_FIELDS[taskType]));
+  const optional = ALL_OPTIONAL_FIELDS.filter((field) => !required.includes(field));
+
+  return {
+    required,
+    optional,
+  };
+}
+
+export function getStructuredOutputFieldGuide(taskType: ResearchTaskType) {
+  const contract = getStructuredOutputContract(taskType);
+
+  return {
+    required: contract.required.map((field) => `${field}: ${FIELD_DESCRIPTIONS[field]}`),
+    optional: contract.optional.map((field) => `${field}: ${FIELD_DESCRIPTIONS[field]}`),
+  };
+}
+
+export function buildStructuredOutputJsonSchema(taskType: ResearchTaskType) {
+  const contract = getStructuredOutputContract(taskType);
+
+  return {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      subject: { type: 'string' },
+      current_view: { type: 'string' },
+      direct_answer: { type: 'string' },
+      core_judgment: { type: 'string' },
+      bull_case: { type: 'array', items: { type: 'string' }, maxItems: 4 },
+      bear_case: { type: 'array', items: { type: 'string' }, maxItems: 4 },
+      key_variables: { type: 'array', items: { type: 'string' }, maxItems: 4 },
+      strongest_counterargument: { type: 'string' },
+      mind_change_conditions: { type: 'array', items: { type: 'string' }, maxItems: 4 },
+      one_line_takeaway: { type: 'string' },
+      facts: { type: 'array', items: { type: 'string' }, maxItems: 4 },
+      inference: { type: 'array', items: { type: 'string' }, maxItems: 4 },
+      assumptions: { type: 'array', items: { type: 'string' }, maxItems: 4 },
+      short_term_catalysts: { type: 'array', items: { type: 'string' }, maxItems: 4 },
+      medium_term_drivers: { type: 'array', items: { type: 'string' }, maxItems: 4 },
+      long_term_thesis: { type: 'array', items: { type: 'string' }, maxItems: 4 },
+      thesis_change_vs_price_action: { type: 'string' },
+      impact_on_current_thesis: {
+        type: 'string',
+        enum: ['strengthens', 'weakens', 'unchanged', 'new', 'not_applicable'],
+      },
+      thesis_update: { type: 'string' },
+      top_things_to_watch: { type: 'array', items: { type: 'string' }, maxItems: 4 },
+      watch_list: { type: 'array', items: { type: 'string' }, maxItems: 6 },
+    },
+    required: contract.required,
+  };
+}
+
+function isFilledString(value: unknown) {
+  return Boolean(sanitizeText(value));
+}
+
+function isFilledStringArray(value: unknown) {
+  return Array.isArray(value) && value.some((item) => Boolean(sanitizeText(item)));
+}
+
+export function validateStructuredOutputDraft(
+  raw: unknown,
+  taskType: ResearchTaskType,
+) {
+  const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  const { required } = getStructuredOutputContract(taskType);
+
+  const missing = required.filter((field) => {
+    if (
+      field === 'bull_case' ||
+      field === 'bear_case' ||
+      field === 'key_variables' ||
+      field === 'mind_change_conditions' ||
+      field === 'top_things_to_watch'
+    ) {
+      return !isFilledStringArray(source[field]);
+    }
+
+    if (field === 'impact_on_current_thesis') {
+      return !isFilledString(source[field]) || normalizeImpact(source[field]) === 'not_applicable';
+    }
+
+    return !isFilledString(source[field]);
+  });
+
+  return {
+    ok: missing.length === 0,
+    missing,
+  };
 }
 
 export function createEmptyStructuredOutput(params: {
@@ -538,11 +733,11 @@ export function renderStructuredResearchMarkdown(
     lines.push('');
   }
 
-  lines.push('## Bull Case');
+  lines.push(zh ? '## 看多逻辑' : '## Bull Case');
   lines.push(...(output.bull_case.length ? output.bull_case.map((item) => `- ${item}`) : ['- N/A']));
   lines.push('');
 
-  lines.push('## Bear Case');
+  lines.push(zh ? '## 看空逻辑' : '## Bear Case');
   lines.push(...(output.bear_case.length ? output.bear_case.map((item) => `- ${item}`) : ['- N/A']));
   lines.push('');
 
@@ -571,7 +766,7 @@ export function renderStructuredResearchMarkdown(
 
   if (output.facts.length || output.inference.length || output.assumptions.length) {
     lines.push('');
-    lines.push('## Facts / Inference / Assumptions');
+    lines.push(zh ? '## 事实 / 推断 / 假设' : '## Facts / Inference / Assumptions');
 
     if (output.facts.length) {
       lines.push(zh ? '### 事实' : '### Facts');

@@ -1,27 +1,26 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Lock, CheckCircle, AlertCircle, Eye, EyeOff } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { AlertCircle, CheckCircle, Eye, EyeOff, Loader2, Lock } from 'lucide-react';
+
+import AuthLayout from '@/components/auth/AuthLayout';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { supabase } from '@/lib/supabase';
 
 export default function ResetPassword() {
   const navigate = useNavigate();
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isValidSession, setIsValidSession] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
 
   useEffect(() => {
-    // Handle the password recovery token from the URL
     const handlePasswordRecovery = async () => {
       try {
         const queryParams = new URLSearchParams(window.location.search);
@@ -33,42 +32,26 @@ export default function ResetPassword() {
         const errorCode = queryParams.get('error_code') ?? hashParams.get('error_code');
         const errorDescription =
           queryParams.get('error_description') ?? hashParams.get('error_description');
-        
-        console.log('ResetPassword - Hash params:', { 
-          type, 
-          hasAccessToken: !!accessToken,
-          hasTokenHash: !!tokenHash,
-          hasCode: !!code,
-          errorCode,
-          errorDescription,
-          fullQuery: window.location.search,
-          fullHash: window.location.hash
-        });
 
-        // Check for errors first (expired token, etc.)
         if (errorCode === 'otp_expired' || errorDescription?.includes('expired')) {
-          setError('Your password reset link has expired. Please request a new one.');
+          setError('重置链接已过期，请重新申请新的密码重置邮件。');
           setCheckingSession(false);
           setTimeout(() => {
-            navigate("/forgot-password");
+            navigate('/forgot-password');
           }, 3000);
           return;
         }
 
         if (errorCode || errorDescription) {
-          setError(errorDescription || 'Invalid reset link. Please request a new one.');
+          setError(errorDescription || '重置链接无效，请重新申请。');
           setCheckingSession(false);
           setTimeout(() => {
-            navigate("/forgot-password");
+            navigate('/forgot-password');
           }, 3000);
           return;
         }
 
-        // Check if this is a recovery link
         if (type === 'recovery' && accessToken) {
-          console.log('Valid recovery token found');
-          // The recovery token is valid, allow password reset
-          setIsValidSession(true);
           setCheckingSession(false);
           return;
         }
@@ -89,233 +72,203 @@ export default function ResetPassword() {
           }
         }
 
-        // Also check for existing session (for users who are already in password reset mode)
-        const { data: { session } } = await supabase.auth.getSession();
-        console.log('Current session:', session);
-        
-        // If we have a session, we can allow password reset
-        // This happens after the user has clicked the email link and Supabase has created a session
-        if (session) {
-          setIsValidSession(true);
-        } else {
-          // No valid session or recovery token
-          console.log('No valid session or recovery token, redirecting to forgot password');
-          setError('Invalid or missing reset link. Please request a new one.');
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session) {
+          setError('未检测到有效的密码重置会话，请重新申请链接。');
           setTimeout(() => {
-            navigate("/forgot-password");
+            navigate('/forgot-password');
           }, 3000);
         }
-      } catch (error) {
-        console.error('Error checking recovery session:', error);
-        setError('An error occurred. Please request a new reset link.');
+      } catch (recoveryError) {
+        console.error('Error checking recovery session:', recoveryError);
+        setError('验证重置链接时出现异常，请重新申请。');
         setTimeout(() => {
-          navigate("/forgot-password");
+          navigate('/forgot-password');
         }, 3000);
       } finally {
         setCheckingSession(false);
       }
     };
 
-    handlePasswordRecovery();
+    void handlePasswordRecovery();
   }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setError('');
 
-    // Validation
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError('两次输入的密码不一致。');
       return;
     }
 
     if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+      setError('密码至少需要 8 位。');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({ 
-        password: password 
+      const { error } = await supabase.auth.updateUser({
+        password,
       });
 
       if (error) {
         setError(error.message);
-      } else {
-        setSuccess(true);
-        // Sign out to ensure clean state
-        await supabase.auth.signOut();
-        // Redirect to login after 3 seconds
-        setTimeout(() => {
-          navigate("/login");
-        }, 3000);
+        return;
       }
-    } catch (err) {
-      setError("An unexpected error occurred. Please try again.");
-      console.error("Password update error:", err);
+
+      setSuccess(true);
+      await supabase.auth.signOut();
+      setTimeout(() => {
+        navigate('/login');
+      }, 3000);
+    } catch (updateError) {
+      setError('更新密码时出现异常，请稍后重试。');
+      console.error('Password update error:', updateError);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Show loading state while checking session or error state
   if (checkingSession || error) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="py-8">
-            <div className="flex flex-col items-center space-y-4">
-              {error ? (
-                <>
-                  <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-2">
-                    <AlertCircle className="h-6 w-6 text-red-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold">Reset Link Error</h3>
-                  <p className="text-muted-foreground text-center">{error}</p>
-                  <p className="text-sm text-muted-foreground">Redirecting to password reset request...</p>
-                </>
-              ) : (
-                <>
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-muted-foreground">Verifying reset link...</p>
-                </>
-              )}
+      <AuthLayout
+        eyebrow="Password reset"
+        title={error ? '重置链接暂不可用' : '正在验证重置链接'}
+        description={
+          error
+            ? '系统没有拿到可用的重置凭证，请重新申请新的密码重置邮件。'
+            : '请稍等，我们正在确认当前链接是否仍然有效。'
+        }
+        compact
+      >
+        <div className="space-y-5">
+          {error ? (
+            <Alert className="rounded-[22px] border-red-200 bg-red-50 text-red-700">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : (
+            <div className="flex items-center gap-3 rounded-[22px] border border-border/70 bg-slate-50/82 px-4 py-4 text-sm text-slate-600">
+              <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
+              正在验证...
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          )}
+        </div>
+      </AuthLayout>
     );
   }
 
   if (success) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle className="h-6 w-6 text-green-600" />
-            </div>
-            <CardTitle>Password Reset Successful</CardTitle>
-            <CardDescription className="mt-2">
-              Your password has been updated successfully
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Alert className="bg-green-50 border-green-200">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">
-                You can now log in with your new password. Redirecting to login page...
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-        </Card>
-      </div>
+      <AuthLayout
+        eyebrow="Password reset"
+        title="密码重置成功"
+        description="你的密码已经更新完成，现在可以使用新密码重新登录。"
+        compact
+      >
+        <Alert className="rounded-[22px] border-emerald-200 bg-emerald-50 text-emerald-700">
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription>系统即将跳转回登录页。</AlertDescription>
+        </Alert>
+      </AuthLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Reset Your Password</CardTitle>
-          <CardDescription>
-            Enter your new password below
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="password">New Password</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={isLoading}
-                  minLength={8}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => setShowPassword(!showPassword)}
-                  disabled={isLoading}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <Eye className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Must be at least 8 characters
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirm-password">Confirm New Password</Label>
-              <div className="relative">
-                <Input
-                  id="confirm-password"
-                  type={showConfirmPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  disabled={isLoading}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  disabled={isLoading}
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <Eye className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-          </CardContent>
-          <CardFooter>
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={isLoading || !password || !confirmPassword}
+    <AuthLayout
+      eyebrow="Password reset"
+      title="设置新的登录密码"
+      description="重置完成后，你可以继续回到工作台、归档页和 Provider 控制中心。"
+    >
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="space-y-2">
+          <Label htmlFor="password">新密码</Label>
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              placeholder="至少 8 位"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              disabled={isLoading}
+              minLength={8}
+              className="pr-12"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1/2 h-9 w-9 -translate-y-1/2"
+              onClick={() => setShowPassword((current) => !current)}
+              disabled={isLoading}
             >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating password...
-                </>
-              ) : (
-                <>
-                  <Lock className="mr-2 h-4 w-4" />
-                  Reset Password
-                </>
-              )}
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              <span className="sr-only">{showPassword ? '隐藏密码' : '显示密码'}</span>
             </Button>
-          </CardFooter>
-        </form>
-      </Card>
-    </div>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="confirm-password">确认新密码</Label>
+          <div className="relative">
+            <Input
+              id="confirm-password"
+              type={showConfirmPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              placeholder="再次输入密码"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              disabled={isLoading}
+              className="pr-12"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1/2 h-9 w-9 -translate-y-1/2"
+              onClick={() => setShowConfirmPassword((current) => !current)}
+              disabled={isLoading}
+            >
+              {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              <span className="sr-only">{showConfirmPassword ? '隐藏密码' : '显示密码'}</span>
+            </Button>
+          </div>
+        </div>
+
+        {error ? (
+          <Alert variant="destructive" className="rounded-[22px] border-red-200 bg-red-50 text-red-700">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        <Button
+          type="submit"
+          className="w-full justify-center"
+          disabled={isLoading || !password || !confirmPassword}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              更新中
+            </>
+          ) : (
+            <>
+              <Lock className="h-4 w-4" />
+              更新密码
+            </>
+          )}
+        </Button>
+      </form>
+    </AuthLayout>
   );
 }

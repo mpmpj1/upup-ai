@@ -28,7 +28,7 @@ describe('structured payload normalization', () => {
   it('normalizes thesis-card payloads for reuse', () => {
     const card = normalizeThesisCardContent({
       subject: '腾讯',
-      current_view: '现金流稳但估值仍有折价',
+      current_view: '现金流稳健但估值仍有折价',
       core_thesis: '市场分歧不在业务真伪，而在折价何时修复。',
       bull_case: ['广告恢复'],
       bear_case: ['监管折价'],

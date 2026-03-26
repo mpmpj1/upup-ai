@@ -1,314 +1,114 @@
-import { useEffect } from "react";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import { Card, CardContent } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, Users } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { AlertTriangle, BookCheck, FileWarning, Scale, ShieldAlert } from "lucide-react";
 
-const TermsOfService = () => {
-  // Scroll to top when component mounts
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-  const lastUpdated = new Date().toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric'
+import PublicContentLayout from "@/components/PublicContentLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+const sections = [
+  {
+    title: "仅供研究与信息组织使用",
+    icon: BookCheck,
+    paragraphs: [
+      "涨涨AI 的活跃主线是 thesis-first AI 金融研究工作台。产品围绕结构化研究、连续追问、事件更新与研究资产沉淀来组织体验。",
+      "你应将其理解为研究辅助工具，而不是经纪服务、自动交易系统、投资顾问或收益承诺工具。",
+    ],
+  },
+  {
+    title: "不提供个性化投资建议",
+    icon: ShieldAlert,
+    paragraphs: [
+      "产品不会向你提供个性化买卖建议、仓位建议、止损止盈指令，亦不会替代持牌专业人士的判断。",
+      "research-only guardrail 会尽量把高风险请求改写回研究型分析，但这不意味着所有输出都适合直接用于真实投资决策。",
+    ],
+  },
+  {
+    title: "模型与研究输出的局限",
+    icon: FileWarning,
+    paragraphs: [
+      "AI 模型可能出现遗漏、误读、过时信息、幻觉或不完整推理。Structured Research View、citations 与 Thesis Card 只是帮助你更高效地复核，而不是替你承担判断责任。",
+      "金融市场变化迅速，过去正确的 thesis 也可能因新事件而失效。你有责任自行验证关键事实、来源和结论。",
+    ],
+  },
+  {
+    title: "账号、Provider 与内容责任",
+    icon: Scale,
+    paragraphs: [
+      "你需要对自己的账号安全、Provider 选择、API 成本、研究输入内容以及基于研究结果作出的行为负责。",
+      "如果你接入第三方 Provider 或检索服务，该服务的可用性、价格、保留策略和合规要求也可能影响你的使用体验。",
+    ],
+  },
+];
+
+export default function TermsOfService() {
+  const lastUpdated = new Date().toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Header />
-
-      <main className="flex-1 container mx-auto px-6 py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold">Terms of Service</h1>
-          <p className="text-muted-foreground mt-2">
-            Last Updated: {lastUpdated}
-          </p>
-        </div>
-
-        {/* Critical Warning */}
-        <Alert className="mb-8 border-destructive/50 bg-destructive/5">
-          <AlertTriangle className="h-5 w-5 text-destructive" />
-          <AlertDescription className="text-sm font-medium">
-            <strong>IMPORTANT:</strong> By using TradingGoose, you agree to these Terms of Service.
-            TradingGoose is an informational platform that does not provide investment advice,
-            brokerage services, or execute trades. Always consult with qualified financial advisors.
-          </AlertDescription>
-        </Alert>
-
-        <div className="space-y-6">
-          {/* Section 1 */}
-          <Card>
-            <CardContent className="pt-6">
-              <h2 className="text-xl font-semibold mb-4">1. Informational Purpose Only</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                TradingGoose is designed exclusively as an <strong>informational platform</strong> that
-                provides AI-powered analysis workflows for processing market data. The platform offers structured AI
-                analysis workflows to process publicly available information and presents processed data for informational
-                purposes only. TradingGoose does <strong>NOT</strong> provide personalized investment advice, make
-                recommendations to buy, sell, or hold any securities, or offer any form of financial advisory services.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Section 2 */}
-          <Card>
-            <CardContent className="pt-6">
-              <h2 className="text-xl font-semibold mb-4">2. No Trading or Brokerage Services</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                TradingGoose does <strong>NOT</strong> provide direct AI trading services, automated trading execution,
-                brokerage or intermediary services, or any form of trade execution on behalf of users. The platform does
-                <strong>NOT</strong> collect, monitor, or have access to users' actual trading activities or brokerage
-                accounts. All trading connections and executions are performed directly between users and their chosen
-                brokerage platforms. TradingGoose merely provides analytical workflows and information processing tools.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Section 3 */}
-          <Card>
-            <CardContent className="pt-6">
-              <h2 className="text-xl font-semibold mb-4">3. Not Financial Advice</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                Nothing on TradingGoose constitutes financial, investment, legal, tax, or other professional advice.
-                The AI-generated analyses, workflows, and insights provided are <strong>NOT</strong> a substitute for
-                professional financial advice or personal judgment. Users should <strong>ALWAYS</strong> consult with
-                qualified and licensed financial advisors before making any investment decisions.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Section 4 */}
-          <Card className="border-destructive/30 bg-destructive/5">
-            <CardContent className="pt-6">
-              <h2 className="text-xl font-semibold mb-4 text-destructive">4. High-Risk Financial Activity Warning</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                Trading and investing in financial markets involves <strong>substantial risk of loss</strong> and is not
-                suitable for every investor. The valuation of financial instruments may fluctuate, and as a result, users
-                may lose more than their original investment. Users may lose some or <strong>all</strong> of their invested
-                capital. Past performance, simulations, and analyses do <strong>NOT</strong> guarantee future results.
-                Users should never invest money they cannot afford to lose and must be fully aware of and accept all risks
-                associated with trading and investing before entering any financial markets.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Section 5 */}
-          <Card>
-            <CardContent className="pt-6">
-              <h2 className="text-xl font-semibold mb-4">5. AI and Algorithmic Limitations</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                The AI systems and algorithms used by TradingGoose are based on historical data and mathematical models
-                that may not accurately predict future market conditions. AI-generated insights are subject to limitations,
-                biases, and errors inherent in machine learning systems. Market conditions can change rapidly and
-                unpredictably, rendering any analysis obsolete. Users should independently verify all information and not
-                rely solely on AI-generated content for investment decisions.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Section 6 */}
-          <Card>
-            <CardContent className="pt-6">
-              <h2 className="text-xl font-semibold mb-4">6. No Guarantee of Accuracy or Completeness</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                While TradingGoose strives to provide accurate and timely information, we make <strong>NO</strong> representations
-                or warranties of any kind, express or implied, about the completeness, accuracy, reliability, suitability, or
-                availability of any information, products, services, or related graphics. Any reliance placed on such information
-                is strictly at the user's own risk.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Section 7 */}
-          <Card>
-            <CardContent className="pt-6">
-              <h2 className="text-xl font-semibold mb-4">7. User Responsibility</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                Users are solely responsible for conducting their own research and due diligence before making any investment
-                decisions. Users must consider their personal financial situation, investment objectives, risk tolerance, and
-                investment horizon. Users acknowledge that they are using TradingGoose at their own risk and that all investment
-                decisions and their consequences are solely their responsibility.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Section 8 */}
-          <Card>
-            <CardContent className="pt-6">
-              <h2 className="text-xl font-semibold mb-4">8. Limitation of Liability</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                To the fullest extent permitted by law, TradingGoose, its creators, operators, employees, and affiliates
-                shall <strong>NOT</strong> be liable for any direct, indirect, incidental, special, consequential, or punitive
-                damages, including but not limited to loss of profits, data, use, goodwill, or other intangible losses resulting
-                from the use or inability to use the platform, any gains or losses incurred in real-world trading, or any
-                investment decisions made based on information provided by the platform.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Section 9 */}
-          <Card>
-            <CardContent className="pt-6">
-              <h2 className="text-xl font-semibold mb-4">9. Data Privacy and Security</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                TradingGoose does <strong>NOT</strong> collect or monitor users' actual trading activities, have access to
-                users' brokerage accounts, or store sensitive financial information beyond what users explicitly provide for
-                analysis purposes. The platform processes only publicly available market data and user-provided parameters
-                for generating analyses through AI workflows.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Section 10 */}
-          <Card>
-            <CardContent className="pt-6">
-              <h2 className="text-xl font-semibold mb-4">10. Regulatory Compliance</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                Users are responsible for ensuring their use of TradingGoose and any resulting investment activities comply
-                with all applicable laws and regulations in their jurisdiction. TradingGoose makes no representation that
-                the platform is appropriate or available for use in all locations. Users accessing the platform from
-                jurisdictions where its contents are illegal or prohibited do so at their own risk.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Section 11 */}
-          <Card>
-            <CardContent className="pt-6">
-              <h2 className="text-xl font-semibold mb-4">11. Modification of Terms</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                TradingGoose reserves the right to modify these Terms of Service at any time without prior notice. Users are
-                responsible for regularly reviewing these terms. Continued use of the platform after any modifications
-                constitutes acceptance of the updated terms.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Section 12 - Legal & Compliance */}
-          <Card className="border-orange-500/30 bg-orange-500/5">
-            <CardContent className="pt-6">
-              <h2 className="text-xl font-semibold mb-4">12. Legal & Compliance</h2>
-              <div className="space-y-4 text-muted-foreground leading-relaxed">
-                <div>
-                  <p className="font-semibold text-foreground mb-2">Investment Advisory Registration</p>
-                  <p>
-                    TradingGoose is <strong>NOT</strong> registered as an investment advisor with the Securities and Exchange
-                    Commission (SEC) or any state securities authority. We are not a Registered Investment Advisor (RIA),
-                    broker-dealer, or financial institution. TradingGoose does not provide personalized investment advice,
-                    portfolio management services, or fiduciary services.
-                  </p>
-                </div>
-
-                <div>
-                  <p className="font-semibold text-foreground mb-2">Professional and Commercial Use</p>
-                  <p>
-                    TradingGoose is designed for individual, non-commercial use only. Professional traders, financial advisors,
-                    fund managers, and institutional users must:
-                  </p>
-                  <ul className="list-disc pl-6 mt-2 space-y-1">
-                    <li>Obtain appropriate licenses and registrations in their jurisdiction</li>
-                    <li>Ensure compliance with all professional standards and regulations</li>
-                    <li>Verify that AI-assisted analysis meets their compliance requirements</li>
-                    <li>Maintain proper documentation for regulatory audits</li>
-                    <li>Consider enterprise-grade solutions designed for professional use</li>
-                  </ul>
-                </div>
-
-                <div>
-                  <p className="font-semibold text-foreground mb-2">Jurisdictional Restrictions</p>
-                  <p>
-                    The use of AI-powered trading analysis tools may be restricted or prohibited in certain jurisdictions.
-                    Users are responsible for determining whether their use of TradingGoose is lawful in their location.
-                    Some jurisdictions may require specific licenses, registrations, or prohibit certain trading activities.
-                  </p>
-                </div>
-
-                <div>
-                  <p className="font-semibold text-foreground mb-2">Tax Obligations</p>
-                  <p>
-                    Users are solely responsible for all tax obligations arising from their trading activities. This includes
-                    but is not limited to capital gains taxes, income taxes, and any reporting requirements. TradingGoose does
-                    not provide tax advice or tax reporting services.
-                  </p>
-                </div>
-
-                <div>
-                  <p className="font-semibold text-foreground mb-2">Risk Disclosure Requirements</p>
-                  <p>
-                    <strong>CFTC RULE 4.41 DISCLAIMER:</strong> HYPOTHETICAL OR SIMULATED PERFORMANCE RESULTS HAVE CERTAIN
-                    LIMITATIONS. UNLIKE AN ACTUAL PERFORMANCE RECORD, SIMULATED RESULTS DO NOT REPRESENT ACTUAL TRADING.
-                    ALSO, SINCE THE TRADES HAVE NOT BEEN EXECUTED, THE RESULTS MAY HAVE UNDER-OR-OVER COMPENSATED FOR THE
-                    IMPACT, IF ANY, OF CERTAIN MARKET FACTORS, SUCH AS LACK OF LIQUIDITY. SIMULATED TRADING PROGRAMS IN
-                    GENERAL ARE ALSO SUBJECT TO THE FACT THAT THEY ARE DESIGNED WITH THE BENEFIT OF HINDSIGHT. NO
-                    REPRESENTATION IS BEING MADE THAT ANY ACCOUNT WILL OR IS LIKELY TO ACHIEVE PROFIT OR LOSSES SIMILAR
-                    TO THOSE SHOWN.
-                  </p>
-                </div>
-
-                <div>
-                  <p className="font-semibold text-foreground mb-2">Anti-Money Laundering (AML) and Know Your Customer (KYC)</p>
-                  <p>
-                    While TradingGoose does not handle user funds or execute trades directly, users must ensure their trading
-                    activities comply with all applicable AML and KYC regulations. Users are responsible for complying with
-                    all financial crime prevention requirements in their jurisdiction.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Section 13 - Acceptance */}
-          <Card>
-            <CardContent className="pt-6">
-              <h2 className="text-xl font-semibold mb-4">13. Acceptance of Terms</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                By accessing and using TradingGoose, you acknowledge that you have read, understood, and agree to be bound
-                by these Terms of Service. If you do not agree with any part of these terms, you must immediately discontinue
-                use of the platform.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Contact Section */}
-          <Card className="border-primary/30 bg-primary/5">
-            <CardContent className="pt-6">
-              <div className="flex items-start gap-4">
-                <Users className="h-6 w-6 text-primary mt-1 flex-shrink-0" />
-                <div>
-                  <h3 className="text-lg font-semibold mb-2">Still have questions?</h3>
-                  <p className="text-muted-foreground">
-                    If you couldn't find the answer you're looking for, please don't hesitate to reach out to our support team.
-                    We're here to help you get the most out of TradingGoose.
-                  </p>
-                  <Button
-                    className="mt-4"
-                    variant="default"
-                    onClick={() => window.open('https://discord.gg/wavf5JWhuT', '_blank')}
-                  >
-                    Contact Support
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Footer Note */}
-          <div className="text-center text-sm text-muted-foreground pt-8 pb-4">
-            <p className="italic">
-              <strong className="text-primary">TradingGoose</strong> - Providing structured AI analysis workflows for
-              informational purposes only.
+    <PublicContentLayout
+      eyebrow="Terms"
+      title="服务条款与使用边界"
+      description="这些条款用于说明 thesis-first 研究工作台的使用范围、责任边界与风险提醒，避免将研究产品误读为交易执行或个性化投顾服务。"
+      lastUpdated={lastUpdated}
+      highlights={["research-only", "no trade execution", "user responsibility"]}
+    >
+      <section className="panel-card rounded-[28px] border border-rose-200/70 bg-rose-50/80 px-6 py-6 sm:px-8">
+        <div className="flex items-start gap-4">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-600 text-white shadow-sm">
+            <AlertTriangle className="h-5 w-5" />
+          </div>
+          <div className="space-y-3">
+            <p className="section-kicker text-rose-700">Important</p>
+            <h2 className="text-2xl font-semibold tracking-tight text-slate-950">
+              使用本产品前，请先确认你理解它是研究工具，而不是交易代理。
+            </h2>
+            <p className="text-sm leading-7 text-slate-700">
+              涨涨AI 不执行交易、不提供经纪服务、不提供个性化投资建议，也不保证研究输出的完整性、准确性或盈利结果。
+              如果你继续使用产品，即表示你接受这些边界，并愿意对自己的判断与行为负责。
             </p>
           </div>
         </div>
-      </main>
+      </section>
 
-      <Footer />
-    </div>
+      <section className="grid gap-6 lg:grid-cols-2">
+        {sections.map((section) => {
+          const Icon = section.icon;
+
+          return (
+            <Card key={section.title} className="panel-card overflow-hidden border-0 shadow-none">
+              <CardHeader className="space-y-3 pb-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm">
+                  <Icon className="h-5 w-5" />
+                </div>
+                <CardTitle className="text-2xl font-semibold tracking-tight text-slate-950">
+                  {section.title}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm leading-7 text-slate-600">
+                {section.paragraphs.map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </section>
+
+      <section className="panel-card-muted rounded-[28px] px-6 py-6 sm:px-8">
+        <p className="section-kicker">Additional Terms</p>
+        <div className="mt-3 space-y-4 text-sm leading-7 text-slate-600">
+          <p>
+            你应当遵守适用于自己所在司法辖区的法律法规，并确保自身使用 AI 研究工具、市场数据、外部 Provider 和相关研究资料的方式合法合规。
+          </p>
+          <p>
+            你不应使用本产品从事违法活动、规避限制、侵犯他人权利、上传恶意内容或试图破坏服务可用性。对于异常使用、滥用或安全风险，我们保留采取限制措施的权利。
+          </p>
+          <p>
+            我们可能在产品演进、合规要求或服务边界变化时更新这些条款。若你在更新后继续使用产品，通常意味着你接受更新后的版本。
+          </p>
+        </div>
+      </section>
+    </PublicContentLayout>
   );
-};
-
-export default TermsOfService;
+}

@@ -7,6 +7,39 @@ import {
   type ResearchStructuredOutput,
 } from './researchSchemas.ts';
 
+function containsChinese(text: string) {
+  return /[\u3400-\u9fff]/.test(text);
+}
+
+function resolveContinuityLanguage(params: {
+  preferredLanguage?: 'zh' | 'en';
+  marketScope?: string;
+  messages?: Array<Record<string, unknown>>;
+  thesisCardContent?: Record<string, unknown> | null;
+}): 'zh' | 'en' {
+  if (params.preferredLanguage) {
+    return params.preferredLanguage;
+  }
+
+  const samples = [
+    ...(params.messages || []).map((message) => String(message.content || '')),
+    String(params.thesisCardContent?.subject || ''),
+    String(params.thesisCardContent?.current_view || ''),
+    String(params.thesisCardContent?.core_thesis || ''),
+  ].filter(Boolean);
+
+  if (samples.some((sample) => containsChinese(sample))) {
+    return 'zh';
+  }
+
+  const normalizedScope = String(params.marketScope || '').toLowerCase();
+  if (normalizedScope === 'cn' || normalizedScope === 'hk') {
+    return 'zh';
+  }
+
+  return 'en';
+}
+
 function toRecentMessage(message: Record<string, unknown>) {
   const role = String(message.role || 'user');
   const normalizedRole =
@@ -22,6 +55,7 @@ function toRecentMessage(message: Record<string, unknown>) {
 export function extractStructuredOutputFromMessage(
   value: unknown,
   marketScope?: string,
+  language: 'zh' | 'en' = 'en',
 ): ResearchStructuredOutput | null {
   if (!value || typeof value !== 'object') {
     return null;
@@ -45,7 +79,7 @@ export function extractStructuredOutputFromMessage(
         : typeof (structured.stance as Record<string, unknown> | undefined)?.label === 'string'
           ? String((structured.stance as Record<string, unknown>).label)
           : undefined,
-    language: 'zh',
+    language,
     citations: Array.isArray(structured.citations) ? (structured.citations as unknown[]) : [],
     complianceFlags: Array.isArray(structured.compliance_flags)
       ? (structured.compliance_flags as string[])
@@ -75,7 +109,14 @@ export function buildConversationContinuity(params: {
   messages?: Array<Record<string, unknown>>;
   thesisCardContent?: Record<string, unknown> | null;
   marketScope?: string;
+  language?: 'zh' | 'en';
 }): ResearchConversationContinuity {
+  const language = resolveContinuityLanguage({
+    preferredLanguage: params.language,
+    marketScope: params.marketScope,
+    messages: params.messages,
+    thesisCardContent: params.thesisCardContent,
+  });
   const recentMessages = (params.messages || [])
     .map((message) => toRecentMessage(message))
     .filter((message) => message.content)
@@ -108,7 +149,7 @@ export function buildConversationContinuity(params: {
         taskType: 'initial_thesis',
         marketScope: params.marketScope,
         subject: typeof card.subject === 'string' ? card.subject : undefined,
-        language: 'zh',
+        language,
       },
     );
   }
@@ -117,6 +158,7 @@ export function buildConversationContinuity(params: {
     latestStructuredOutput = extractStructuredOutputFromMessage(
       latestAssistantWithStructure.structured_answer,
       params.marketScope,
+      language,
     );
   }
 
@@ -143,6 +185,7 @@ export async function loadResearchConversationState(
   userId: string,
   conversationId?: string,
   marketScope?: string,
+  language?: 'zh' | 'en',
 ) {
   if (!conversationId) {
     return createEmptyContinuity();
@@ -182,15 +225,20 @@ export async function loadResearchConversationState(
     messages: (messages || []) as Array<Record<string, unknown>>,
     thesisCardContent,
     marketScope,
+    language,
   });
 }
 
-export function fallbackConversationContinuity(subject?: string, marketScope?: string) {
+export function fallbackConversationContinuity(
+  subject?: string,
+  marketScope?: string,
+  language?: 'zh' | 'en',
+) {
   const fallback = createEmptyStructuredOutput({
     taskType: 'initial_thesis',
     marketScope,
     subject,
-    language: 'zh',
+    language: language || (marketScope === 'cn' || marketScope === 'hk' ? 'zh' : 'en'),
   });
 
   return {

@@ -31,6 +31,8 @@ export interface GenerationOptions {
   maxTokens?: number;
   temperature?: number;
   expectJson?: boolean;
+  jsonSchema?: Record<string, unknown>;
+  jsonSchemaName?: string;
 }
 
 const DEFAULT_MODELS: Record<string, string> = {
@@ -78,7 +80,7 @@ function safeParseHeaders(
   return {};
 }
 
-function toResolvedProfile(input: any): ResolvedProviderProfile {
+function toResolvedProfile(input: Record<string, unknown>): ResolvedProviderProfile {
   const provider = String(input.provider || 'openai').toLowerCase();
 
   return {
@@ -169,7 +171,7 @@ function buildHeaders(
   };
 }
 
-function extractTextFromOpenAICompatibleResponse(payload: any): string {
+function extractTextFromOpenAICompatibleResponse(payload: Record<string, unknown> | null | undefined): string {
   if (!payload) {
     return '';
   }
@@ -183,7 +185,7 @@ function extractTextFromOpenAICompatibleResponse(payload: any): string {
   );
 }
 
-function extractJson(text: string): any {
+function extractJson(text: string): unknown {
   const trimmed = text.trim();
 
   if (!trimmed) {
@@ -212,7 +214,7 @@ async function callOpenAICompatible(
   profile: ResolvedProviderProfile,
   options: GenerationOptions
 ): Promise<string> {
-  const payload: Record<string, unknown> = {
+  const basePayload: Record<string, unknown> = {
     model: profile.model,
     messages: [
       {
@@ -230,28 +232,69 @@ async function callOpenAICompatible(
     max_tokens: options.maxTokens ?? 1800,
   };
 
+  const payloads: Record<string, unknown>[] = [];
+
+  if (options.expectJson && options.jsonSchema) {
+    payloads.push({
+      ...basePayload,
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: options.jsonSchemaName || 'research_output',
+          strict: true,
+          schema: options.jsonSchema,
+        },
+      },
+    });
+  }
+
   if (options.expectJson) {
-    payload.response_format = { type: 'json_object' };
+    payloads.push({
+      ...basePayload,
+      response_format: { type: 'json_object' },
+    });
+  } else {
+    payloads.push(basePayload);
   }
 
-  const response = await fetch(buildOpenAICompatibleUrl(profile), {
-    method: 'POST',
-    headers: buildHeaders(profile),
-    body: JSON.stringify(payload),
-  });
+  let lastError: Error | null = null;
 
-  if (!response.ok) {
-    throw new Error(`Provider request failed (${response.status}): ${await response.text()}`);
+  for (let index = 0; index < payloads.length; index += 1) {
+    const payload = payloads[index];
+    const response = await fetch(buildOpenAICompatibleUrl(profile), {
+      method: 'POST',
+      headers: buildHeaders(profile),
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      const canRetryWithoutSchema =
+        index === 0 &&
+        payloads.length > 1 &&
+        /json_schema|response_format|schema|unsupported|invalid/i.test(errorText);
+
+      if (canRetryWithoutSchema) {
+        lastError = new Error(
+          `Provider rejected json_schema response_format, retrying with json_object: ${errorText}`,
+        );
+        continue;
+      }
+
+      throw new Error(`Provider request failed (${response.status}): ${errorText}`);
+    }
+
+    const data = await response.json();
+    const content = extractTextFromOpenAICompatibleResponse(data);
+
+    if (!content) {
+      throw new Error('Provider returned an empty response');
+    }
+
+    return content;
   }
 
-  const data = await response.json();
-  const content = extractTextFromOpenAICompatibleResponse(data);
-
-  if (!content) {
-    throw new Error('Provider returned an empty response');
-  }
-
-  return content;
+  throw lastError || new Error('Provider request failed before content was returned');
 }
 
 async function callAnthropic(
@@ -319,7 +362,26 @@ async function callGoogle(
   }
 
   const data = await response.json();
-  return data?.candidates?.[0]?.content?.parts?.map((part: any) => part.text || '').join('') || '';
+  const candidates = data?.candidates;
+  if (!Array.isArray(candidates) || candidates.length === 0) {
+    return '';
+  }
+
+  const content = (candidates[0] as Record<string, unknown>).content;
+  const parts =
+    content && typeof content === 'object'
+      ? (content as Record<string, unknown>).parts
+      : [];
+
+  return Array.isArray(parts)
+    ? parts
+        .map((part) =>
+          part && typeof part === 'object'
+            ? String((part as Record<string, unknown>).text || '')
+            : '',
+        )
+        .join('')
+    : '';
 }
 
 export async function resolveProviderProfile(
@@ -331,7 +393,7 @@ export async function resolveProviderProfile(
     return toResolvedProfile(requestProfile);
   }
 
-  let query = supabase
+  const query = supabase
     .from('provider_configurations')
     .select('*')
     .eq('user_id', userId)
@@ -427,7 +489,7 @@ export async function generateText(
   }
 }
 
-export async function generateJson<T = any>(
+export async function generateJson<T = unknown>(
   profile: ResolvedProviderProfile,
   options: GenerationOptions
 ): Promise<T> {

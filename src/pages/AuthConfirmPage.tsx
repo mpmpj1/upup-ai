@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, ArrowRight, CheckCircle2, Loader2, LogIn, MailCheck } from 'lucide-react';
 
+import AuthLayout from '@/components/auth/AuthLayout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth';
 import { getAppPath } from '@/lib/appUrl';
 import { BRAND_NAME_ZH, BRAND_SCOPE_HINT } from '@/lib/brand';
@@ -130,7 +130,7 @@ export default function AuthConfirmPage() {
   const [viewState, setViewState] = useState<ConfirmViewState>({
     status: 'loading',
     title: '正在确认邮箱',
-    description: '系统正在核对你的注册状态，请稍等片刻。',
+    description: '系统正在校验你的注册状态，请稍候片刻。',
   });
 
   useEffect(() => {
@@ -147,9 +147,9 @@ export default function AuthConfirmPage() {
 
       setViewState({
         status: 'success',
-        title: '恭喜你，注册成功',
+        title: '邮箱确认成功',
         description: autoSignedIn
-          ? '邮箱已经确认完成，你现在可以直接进入工作台体验。'
+          ? '邮箱已经确认完成，你现在可以直接进入研究工作台。'
           : '邮箱已经确认完成。为了保证登录状态稳定，现在可以直接返回登录页登录。',
         email,
         autoSignedIn,
@@ -311,7 +311,7 @@ export default function AuthConfirmPage() {
       );
     };
 
-    handleConfirmation();
+    void handleConfirmation();
 
     return () => {
       isCancelled = true;
@@ -322,79 +322,66 @@ export default function AuthConfirmPage() {
     viewState.status === 'success' && (viewState.autoSignedIn || isAuthenticated);
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(250,204,21,0.16),_transparent_38%),linear-gradient(180deg,_rgba(255,251,235,0.96),_rgba(248,250,252,1))] px-4 py-10">
-      <div className="mx-auto flex min-h-[80vh] max-w-lg items-center justify-center">
-        <Card className="w-full border-border/70 bg-white/95 shadow-[0_24px_80px_-32px_rgba(15,23,42,0.35)]">
-          <CardHeader className="space-y-4 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-border/60 bg-white shadow-sm">
-              {viewState.status === 'loading' ? (
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              ) : viewState.status === 'success' ? (
-                <CheckCircle2 className="h-7 w-7 text-emerald-600" />
-              ) : (
-                <AlertCircle className="h-7 w-7 text-amber-600" />
-              )}
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-primary">{BRAND_NAME_ZH}</p>
-              <CardTitle className="text-2xl">{viewState.title}</CardTitle>
-              <CardDescription className="text-sm leading-6 text-muted-foreground">
-                {viewState.description}
-              </CardDescription>
-            </div>
-          </CardHeader>
-
-          <CardContent className="space-y-4">
-            {viewState.email ? (
-              <Alert
-                className={
-                  viewState.status === 'success'
-                    ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-                    : 'border-amber-200 bg-amber-50 text-amber-900'
-                }
-              >
-                <MailCheck
-                  className={
-                    viewState.status === 'success'
-                      ? 'h-4 w-4 text-emerald-600'
-                      : 'h-4 w-4 text-amber-600'
-                  }
-                />
-                <AlertDescription>邮箱：{viewState.email}</AlertDescription>
-              </Alert>
-            ) : null}
-
-            {viewState.status === 'error' ? (
-              <Alert className="border-amber-200 bg-amber-50 text-amber-900">
-                <AlertCircle className="h-4 w-4 text-amber-600" />
-                <AlertDescription>{viewState.detail ?? '请重新操作一次。'}</AlertDescription>
-              </Alert>
-            ) : null}
-
-            <div className="rounded-2xl border border-border/70 bg-slate-50/85 p-4 text-sm leading-6 text-slate-700">
-              {BRAND_SCOPE_HINT}
-            </div>
-          </CardContent>
-
-          <CardFooter className="flex flex-col gap-3">
-            {showWorkspaceAction ? (
-              <Button className="w-full" onClick={() => navigate('/workspace')}>
-                进入工作台
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            ) : (
-              <Button className="w-full" onClick={() => navigate('/login')}>
-                去登录
-                <LogIn className="ml-2 h-4 w-4" />
-              </Button>
-            )}
-
-            <Button variant="outline" className="w-full" onClick={() => navigate('/')}>
-              返回首页
+    <AuthLayout
+      eyebrow="Email confirmation"
+      title={viewState.title}
+      description={viewState.description}
+      compact
+      footer={
+        <div className="flex flex-col gap-3">
+          {showWorkspaceAction ? (
+            <Button className="w-full" onClick={() => navigate('/workspace')}>
+              进入工作台
+              <ArrowRight className="h-4 w-4" />
             </Button>
-          </CardFooter>
-        </Card>
+          ) : (
+            <Button className="w-full" onClick={() => navigate('/login')}>
+              去登录
+              <LogIn className="h-4 w-4" />
+            </Button>
+          )}
+
+          <Button variant="outline" className="w-full" onClick={() => navigate('/')}>
+            返回首页
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-5">
+        <div className="inline-flex h-14 w-14 items-center justify-center rounded-full border border-border/70 bg-white/80">
+          {viewState.status === 'loading' ? (
+            <Loader2 className="h-6 w-6 animate-spin text-amber-600" />
+          ) : viewState.status === 'success' ? (
+            <CheckCircle2 className="h-7 w-7 text-emerald-600" />
+          ) : (
+            <AlertCircle className="h-7 w-7 text-amber-600" />
+          )}
+        </div>
+
+        {viewState.email ? (
+          <Alert
+            className={
+              viewState.status === 'success'
+                ? 'rounded-[22px] border-emerald-200 bg-emerald-50 text-emerald-700'
+                : 'rounded-[22px] border-amber-200 bg-amber-50 text-amber-700'
+            }
+          >
+            <MailCheck className="h-4 w-4" />
+            <AlertDescription>邮箱：{viewState.email}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        {viewState.status === 'error' ? (
+          <Alert className="rounded-[22px] border-amber-200 bg-amber-50 text-amber-700">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{viewState.detail ?? '请重新操作一次。'}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        <div className="rounded-[22px] border border-border/70 bg-slate-50/82 p-4 text-sm leading-7 text-slate-600">
+          {BRAND_NAME_ZH} 只提供 thesis-first、research-only 的金融研究输出。{BRAND_SCOPE_HINT}
+        </div>
       </div>
-    </div>
+    </AuthLayout>
   );
 }

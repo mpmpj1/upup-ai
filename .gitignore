@@ -31,3 +31,6 @@ supabase/functions/.env.local
 supabase/functions/.env.development
 supabase/functions/.env.production
 supabase/.temp/
+
+.vercel
+.env*.local
